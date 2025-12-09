@@ -5,7 +5,6 @@ from .corr import CorrBlock
 from .utils.utils import *
 from .efficientnet_pytorch.model import EfficientNet
 from .utils.torch_geometry import get_perspective_transform
-from .LIDAR_BEV.LIDAR_BEV_backbone import LidarBEVBackbone
 # import torchgeometry as tgm
 
 
@@ -18,12 +17,7 @@ class HCNet(nn.Module):
         self.args = args
         intput_dim = 3
         self.sat_efficientnet = EfficientNet.from_pretrained('efficientnet-b0', circular=False, in_channels = intput_dim)
-        # self.grd_efficientnet = EfficientNet.from_pretrained('efficientnet-b0', circular=False, in_channels = intput_dim) if args.p_siamese else None
-        bev_lidar_channels = int((args.z_range[1] - args.z_range[0]) / args.BEV_grid_resolution) + 1
-        self.lidar_backbone = LidarBEVBackbone(bev_lidar_channels)
-        self.corr_dim = 320 if args.CNN16 else 112
-        # Project LiDAR BEV features to corr_dim
-        self.lidar_proj = nn.Conv2d(96, self.corr_dim, kernel_size=1, bias=False)
+        self.grd_efficientnet = EfficientNet.from_pretrained('efficientnet-b0', circular=False, in_channels = intput_dim) if args.p_siamese else None
         
         in_dim = 164 if args.flow else 166
         sz = 16 if args.CNN16 else 32
@@ -63,55 +57,36 @@ class HCNet(nn.Module):
 
         return coords0, coords1 # [x,y]
 
-    def forward(self, bev_lidar, sat_img, sat_gps=None, iters_lev0 = 6, test_mode=False):
+    def forward(self, image1, image2, sat_gps = [], iters_lev0 = 6, test_mode=False):
         # 0. Normalize input data
-        # Satellite RGB to [-1, 1]; leave BEV as-is (already metric / normalized)
-        sat_img = 2 * (sat_img) - 1.0
-        sat_img = sat_img.contiguous()
-        bev_lidar = bev_lidar.contiguous()
-        self.sz = sat_img.shape # [N, 3, 128, 128]
+        image1 = 2 * (image1 / 255.0) - 1.0 # 【-1，1】
+        image2 = 2 * (image2 / 255.0) - 1.0
+        image1 = image1.contiguous()
+        image2 = image2.contiguous()        
+        self.sz = image1.shape # [N, 3, 128, 128]
         
         # 1. Using Backbone to Obtain Feature Maps
-        # LiDAR BEV -> feature map
-        lidar_feat = self.lidar_backbone(bev_lidar)  # (B, 96, H_bev', W_bev')
+        grd_feature_volume, multiscale_grd = self.sat_efficientnet.extract_features_multiscale(image1) \
+            if self.grd_efficientnet is None else self.grd_efficientnet.extract_features_multiscale(image1)
+        sat_feature_volume, multiscale_sat = self.sat_efficientnet.extract_features_multiscale(image2)
 
-        # Satellite -> EfficientNet multiscale features
-        _, multiscale_sat = self.sat_efficientnet.extract_features_multiscale(sat_img)
         if self.args.CNN16:
-            sat_feat = multiscale_sat[15]  # (B, 320, H_sat', W_sat')
+            fmap1 = multiscale_grd[15] # [320, 16, 16]]
+            fmap2 = multiscale_sat[15] # [320, 16, 16]
         else:
-            sat_feat = multiscale_sat[10]  # (B, 112, H_sat', W_sat')
-        
-        # 1.2 Align spatial size
-        # Choose satellite feature resolution as reference
-        B, C_s, Hs, Ws = sat_feat.shape
-        _, C_l, Hl, Wl = lidar_feat.shape
+            fmap1 = multiscale_grd[10] # [112, 32, 32]
+            fmap2 = multiscale_sat[10] # [112, 32, 32]
+        sz = fmap1.shape
 
-        # Project to common channel dimension
-        lidar_feat = self.lidar_proj(lidar_feat)  # (B, corr_dim, Hl, Wl)
-        # sat_feat = self.sat_proj(sat_feat)        # (B, corr_dim, Hs, Ws)
+        fmap1 = fmap1.float()
+        fmap2 = fmap2.float() 
 
-        # Resize LiDAR feat to satellite feat spatial size
-        lidar_feat = torch.nn.functional.interpolate(
-            lidar_feat, size=(Hs, Ws), mode='bilinear', align_corners=False
-        )
-        
-        fmap1 = lidar_feat.float()  # "ground" branch
-        fmap2 = sat_feat.float()    # "satellite" branch
-        sz = fmap1.shape  # (B, corr_dim, Hc, Wc)
-
-        # 2. Calculate Correlation Matrix
-        
+        # 2. Calculate Correlation Matrix      
         corr_fn = CorrBlock(fmap1, fmap2, num_levels=2, radius=4)
-        # downscale factor between input image (sat_img) and feature map
-        k_factor = self.sz[-1] // sz[-1]  # assumes square & equal scale in H/W
-        coords0, coords1 = self.initialize_flow_k(sat_img, k=k_factor)
-
-        four_point_disp = torch.zeros((sz[0], 2, 2, 2), device=fmap1.device)
-
+        coords0, coords1 = self.initialize_flow_k(image1, k=self.sz[-1]//sz[-1])         
+        four_point_disp = torch.zeros((sz[0], 2, 2, 2)).to(fmap1.device)
 
         # 3. Recurrent Homography Estimation
-        
         flow_predictions =[] ## for train 
         for itr in range(iters_lev0):
             corr = corr_fn(coords1) # batch,channel,H,W  correlation
@@ -126,7 +101,9 @@ class HCNet(nn.Module):
         
         # 4. Output
         coords1,H = self.get_flow_now_k(four_point_disp, k=1) 
-        
+        points = torch.cat((torch.ones((1,1))*self.sz[3]//2.0, torch.ones((1,1))*self.sz[2]//2.0, torch.ones((1,1))),
+                        dim=0).unsqueeze(0).repeat(self.sz[0], 1, 1).to(four_point_disp.device)# [N,2,1] only one point
+        offset = torch.zeros_like(points[:,:2,0])
         self.corr_fn = corr_fn
         if test_mode:
             return four_point_disp #, offset

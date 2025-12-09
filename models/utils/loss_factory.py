@@ -134,3 +134,127 @@ def kitti_ori_loss(four_pred, grd_gps, args, ori_angle, sz = [512,512], gamma = 
         # torch.nanmean((x-y)**2)
         v_loss += i_weight * i_loss    
     return v_loss
+
+
+def zod_four_point_gt(rot_gt, trans_gt, resolution, H_img, W_img, device):
+    """
+    rot_gt: (B, 3, 3) rotation (only yaw used)
+    trans_gt: (B, 3) translation in meters (x,y,0) applied to LiDAR
+    resolution: (B,) meters per pixel
+    Returns:
+        four_gt: (B, 2, 2, 2) corner displacements in *feature* coordinates, same convention as HCNet.
+    """
+    B = rot_gt.shape[0]
+    # image corners in pixel coordinates at full resolution
+    corners = torch.tensor(
+        [[[0, 0],
+          [W_img - 1, 0]],
+         [[0, H_img - 1],
+          [W_img - 1, H_img - 1]]],  # (2,2,2) [x,y]
+        dtype=torch.float32,
+        device=device,
+    )  # [row 0: top, row 1: bottom]
+
+    corners = corners.unsqueeze(0).repeat(B, 1, 1, 1)  # (B,2,2,2)
+
+    # convert pixel to metric coordinates around image center
+    cx = (W_img - 1) / 2.0
+    cy = (H_img - 1) / 2.0
+    res = resolution.view(B, 1, 1, 1)                  # (B,1,1,1)
+
+    x_pix = corners[..., 0]
+    y_pix = corners[..., 1]
+    x_m = (x_pix - cx) * res
+    y_m = (y_pix - cy) * res
+
+    # apply SE(2): [x';y'] = Rz * [x;y] + t_xy
+    cos_t = rot_gt[:, 0, 0].view(B, 1, 1)
+    sin_t = rot_gt[:, 1, 0].view(B, 1, 1)
+    dx = trans_gt[:, 0].view(B, 1, 1)
+    dy = trans_gt[:, 1].view(B, 1, 1)
+
+    x_p = cos_t * x_m - sin_t * y_m + dx
+    y_p = sin_t * x_m + cos_t * y_m + dy
+
+    # back to pixels
+    x_pix_p = x_p / res + cx
+    y_pix_p = y_p / res + cy
+
+    # displacement in pixels
+    disp_x = x_pix_p - x_pix
+    disp_y = y_pix_p - y_pix
+
+    four_gt = torch.stack([disp_x, disp_y], dim=1)  # (B,2,2,2)
+    return four_gt
+
+def zod_homo_loss(four_pred, sat_img, rot_gt, trans_gt, resolution,
+                  gamma=0.85):
+    """
+    four_pred: list of (B,2,2,2) from HCNet
+    sat_img:   (B,3,H,W) satellite input (only H,W used)
+    rot_gt:    (B,3,3) SE(2) rotation (yaw) used in augmentation
+    trans_gt:  (B,3) translation (x,y,0) in meters used in augmentation
+    resolution:(B,) meters per pixel
+    """
+    B, _, H, W = sat_img.shape
+    device = sat_img.device
+    sz = [B, 1, H, W]  # same convention as vigor_gps_loss
+
+    # Ground-truth pixel position of the *warped* center
+    # Start from image center as "reference point":
+    cx = (W - 1) / 2.0
+    cy = (H - 1) / 2.0
+
+    # Convert center to metric coords
+    res = resolution.view(B, 1).to(device)  # (B,1)
+    x_m = torch.zeros(B, 1, device=device)
+    y_m = torch.zeros(B, 1, device=device)
+
+    # Apply SE(2) in metric space
+    cos_t = rot_gt[:, 0, 0]
+    sin_t = rot_gt[:, 1, 0]
+    dx = trans_gt[:, 0]
+    dy = trans_gt[:, 1]
+
+    x_p = cos_t * x_m - sin_t * y_m + dx
+    y_p = sin_t * x_m + cos_t * y_m + dy
+
+    # Back to pixels
+    x_pix_p = x_p / res[:, 0] + cx
+    y_pix_p = y_p / res[:, 0] + cy
+
+    # Ground-truth pixel target y: (B,2)
+    y = torch.stack([x_pix_p, y_pix_p], dim=1)  # (B,2)
+
+    # Multi-iteration loss (same gamma weighting as vigor_gps_loss)
+    if isinstance(four_pred, list):
+        n_predictions = len(four_pred)
+    else:
+        four_pred = [four_pred]
+        n_predictions = 1
+
+    v_loss = 0.0
+    for i in range(n_predictions):
+        i_weight = gamma ** (n_predictions - i - 1)
+        H_mat = get_homograpy(four_pred[i], sz)  # (B,3,3)
+
+        # warp the image center through H
+        points = torch.tensor(
+            [[[cx], [cy], [1.0]]],
+            dtype=torch.float32, device=device
+        ).repeat(B, 1, 1)   # (B,3,1)
+
+        x = H_mat.bmm(points)
+        x = x / x[:, 2:3, :]  # normalize
+        x = x[:, 0:2, 0]      # (B,2) pixel coords
+
+        # pixel-wise L2 loss, scaled like vigor_gps_loss
+        i_loss = ((x - y) ** 2).mean()   # MSE over batch and 2 coords
+        v_loss += i_weight * i_loss
+
+    # Metrics: here you can define your own, e.g. mean |dx| and |dy| in meters,
+    # or mean yaw error in degrees, derived back from four_pred if desired.
+    metrics = {
+        'pix_mse': v_loss.item(),
+    }
+    return v_loss, metrics

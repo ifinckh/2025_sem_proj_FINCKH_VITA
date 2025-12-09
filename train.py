@@ -19,7 +19,8 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader
 from models.network import HCNet
 import evaluate
-import dataset as datasets
+# import dataset as datasets
+import dataset.ZOD as datasets
 from models.utils.utils import *
 from models.utils.loss_factory import *
 from myevaluate import evaluate_HCNet
@@ -44,6 +45,15 @@ except:
             optimizer.step()
         def update(self):
             pass
+        
+from torch.utils.data._utils.collate import default_collate
+
+def zod_collate_fn(batch):
+    # batch is a list of dataset items
+    batch = [b for b in batch if b is not None]
+    if len(batch) == 0:
+        return None
+    return default_collate(batch)
 
 
 def count_parameters(model):
@@ -75,8 +85,8 @@ def train(args):
     train_dataset, val_dataset = datasets.fetch_dataloader(args)
     nw = min([os.cpu_count(), args.batch_size if args.batch_size > 1 else 0, 12])  # number of workers
     print('Using {} dataloader workers every process'.format(nw)) # https://blog.csdn.net/ResumeProject/article/details/125449639
-    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,pin_memory=True, num_workers=nw)
-    val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False,pin_memory=True, num_workers=nw)
+    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,pin_memory=True, num_workers=nw, collate_fn=zod_collate_fn,)
+    val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False,pin_memory=True, num_workers=nw, collate_fn=zod_collate_fn,)
 
     optimizer, scheduler = fetch_optimizer(args, model)
     best_dis = args.best_dis
@@ -97,12 +107,6 @@ def train(args):
         print("Have load state_dict from: {}".format(args.model))
     print('Best distance so far {}.'.format(best_dis))
 
-    try:
-        scheduler._scale_fn_custom = scheduler._scale_fn_ref()
-        scheduler._scale_fn_ref = None
-    except Exception as e:
-        print(f"An error occurred: {str(e)}")
-
     model.cuda()
     model.train()
 
@@ -114,25 +118,58 @@ def train(args):
     epoch = args.start_step//len(train_loader)
     num_epochs = args.num_steps//len(train_loader)
 
-    infoLoss = InfoNCELoss(temperature=args.temperature, sample = True)
+    # infoLoss = InfoNCELoss(temperature=args.temperature, sample = True)
     should_keep_training = True
-    w1, w2, w3 = args.loss_w
+    # w1, w2, w3 = args.loss_w
     while should_keep_training:
-        model.train()  
+        model.train()
         for i_batch, data_blob in enumerate(train_loader):
+            if data_blob is None:
+                continue
             optimizer.zero_grad()
 
+            # ZOD batch: collate will give tensors for each dict field
+            bev_lidar   = data_blob['bev_lidar'].cuda()      # (B, C_bev, H_bev, W_bev)
+            sat_img     = data_blob['image'].cuda()          # (B, 3, H, W) [0,1]
+            rot_gt      = data_blob['rotation'].cuda()       # (B, 3, 3) SE(2) in top-left
+            trans_gt    = data_blob['translation'].cuda()    # (B, 3)
+            resolution  = data_blob['resolution'].cuda()     # (B,) m/pixel
 
-            image1, image2, grd_gps, sat_gps, transformed_center, sat_delta, ori_angle  = [x.cuda() for x in data_blob] # img1, img2, pona_gps, sat_gps
-            sat_delta = sat_delta if args.orig_label else None
+            # Forward pass: HCNet(bev, sat)
+            four_pred, corr_fn = model(
+                bev_lidar, sat_img,
+                sat_gps=None,
+                iters_lev0=args.iters_lev0
+            )
+            
+            # ---- Original HC Net loss -----
+            # sat_delta = sat_delta if args.orig_label else None
 
             # Forward pass   
-            four_pred, corr_fn  = model(image1, image2, sat_gps=sat_gps.float(), iters_lev0=args.iters_lev0)       
-            loss, metrics = vigor_gps_loss(four_pred, grd_gps = grd_gps, sat_gps=sat_gps, args=args, sat_delta = sat_delta, ori_angle = ori_angle, w3 = w3,\
-                orien = args.dataset == 'vigor' and args.orien, transformed_center = transformed_center, sz = [image1.shape[2],image1.shape[3]] ,gamma=args.gamma)
-            loss2 = corr_loss(grd_gps, sat_gps, corr_fn, infoLoss,  args=args, sat_delta = sat_delta, transformed_center = transformed_center, sz = [image1.shape[2],image1.shape[3]])
+            # four_pred, corr_fn  = model(image1, image2, sat_gps=sat_gps.float(), iters_lev0=args.iters_lev0)       
+            # loss, metrics = vigor_gps_loss(four_pred, grd_gps = grd_gps, sat_gps=sat_gps, args=args, sat_delta = sat_delta, ori_angle = ori_angle, w3 = w3,\
+            #     orien = args.dataset == 'vigor' and args.orien, transformed_center = transformed_center, sz = [image1.shape[2],image1.shape[3]] ,gamma=args.gamma)
+            # loss2 = corr_loss(grd_gps, sat_gps, corr_fn, infoLoss,  args=args, sat_delta = sat_delta, transformed_center = transformed_center, sz = [image1.shape[2],image1.shape[3]])
             
-            loss = loss*w1 + loss2*w2
+            # loss = loss*w1 + loss2*w2
+            
+            # ----- GPT's initial proposed loss -----
+            # B, _, H_img, W_img = sat_img.shape
+            # four_gt = zod_four_point_gt(rot_gt, trans_gt, resolution, H_img, W_img, sat_img.device)
+
+            # # four_pred is a list of predictions across iterations; use the last one
+            # four_last = four_pred[-1]  # (B, 2, 2, 2)
+
+            # loss = F.smooth_l1_loss(four_last, four_gt)         
+            
+            # ----- adapted from vigor_gps_loss using GPT -----
+            loss_h, metrics = zod_homo_loss(
+                four_pred, sat_img,
+                rot_gt=rot_gt, trans_gt=trans_gt,
+                resolution=resolution,
+                gamma=args.gamma
+            )
+            loss = loss_h    # for now, no corr_loss   
 
             # Backward and Optimze
             scaler.scale(loss).backward()
@@ -208,6 +245,7 @@ def train(args):
                 .format(epoch+1, num_epochs, val_mdis.item(), best_dis, checkpoint['steps']) + '\n')                       
         epoch+=1 
         
+        
     logger.close()
     print("The minist distance is {}m!".format(best_dis))
 
@@ -217,8 +255,9 @@ def train(args):
 
     model  = model.module
     model.eval()
-    val_dataset = datasets.fetch_dataloader(args, split="validation")
-    evaluate_HCNet(model, val_dataset, args=args)    
+    
+    # val_dataset = datasets.fetch_dataloader(args, split="validation")
+    # evaluate_HCNet(model, val_dataset, args=args)    
 
     return PATH
 
