@@ -43,7 +43,7 @@
 
 
     "use_augmentation" : true,
-    "image_area_dg_m" : 50,
+    "image_area_dg_m" : 51.2,
     "image_area_zod_m" : 100,
     "max_translation" : 15.0,
     "max_rot_deg" : 20.0,
