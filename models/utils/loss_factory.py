@@ -187,80 +187,154 @@ def zod_four_point_gt(rot_gt, trans_gt, resolution, H_img, W_img, device):
     four_gt = torch.stack([disp_x, disp_y], dim=1)  # (B,2,2,2)
     return four_gt
 
-def zod_homo_loss(four_pred, sat_img, rot_gt, trans_gt, resolution,
-                  gamma=0.85):
-    """
-    four_pred: list of (B,2,2,2) from HCNet
-    sat_img:   (B,3,H,W) satellite input (only H,W used)
-    rot_gt:    (B,3,3) SE(2) rotation (yaw) used in augmentation
-    trans_gt:  (B,3) translation (x,y,0) in meters used in augmentation
-    resolution:(B,) meters per pixel
-    """
+# def zod_homo_loss(four_pred, sat_img, rot_gt, trans_gt, resolution,
+#                   gamma=0.85):
+#     """
+#     four_pred: list of (B,2,2,2) from HCNet
+#     sat_img:   (B,3,H,W) satellite input (only H,W used)
+#     rot_gt:    (B,3,3) SE(2) rotation (yaw) used in augmentation
+#     trans_gt:  (B,3) translation (x,y,0) in meters used in augmentation
+#     resolution:(B,) meters per pixel
+#     """
+#     B, _, H, W = sat_img.shape
+#     device = sat_img.device
+#     sz = [B, 1, H, W]  # same convention as vigor_gps_loss
+
+#     # Ground-truth pixel position of the *warped* center
+#     # Start from image center as "reference point":
+#     cx = (W - 1) / 2.0
+#     cy = (H - 1) / 2.0
+
+#     # Convert center to metric coords
+#     res = resolution.view(B, 1).to(device)  # (B,1)
+#     x_m = torch.zeros(B, 1, device=device)
+#     y_m = torch.zeros(B, 1, device=device)
+
+#     # Apply SE(2) in metric space
+#     cos_t = rot_gt[:, 0, 0]
+#     sin_t = rot_gt[:, 1, 0]
+#     dx = trans_gt[:, 0]
+#     dy = trans_gt[:, 1]
+
+#     x_p = cos_t * x_m - sin_t * y_m + dx
+#     y_p = sin_t * x_m + cos_t * y_m + dy
+
+#     # Back to pixels
+#     x_pix_p = x_p / res[:, 0] + cx
+#     y_pix_p = y_p / res[:, 0] + cy
+
+#     # Ground-truth pixel target y: (B,2)
+#     y = torch.stack([x_pix_p, y_pix_p], dim=1)  # (B,2)
+
+#     # Multi-iteration loss (same gamma weighting as vigor_gps_loss)
+#     if isinstance(four_pred, list):
+#         n_predictions = len(four_pred)
+#     else:
+#         four_pred = [four_pred]
+#         n_predictions = 1
+
+#     v_loss = 0.0
+#     for i in range(n_predictions):
+#         i_weight = gamma ** (n_predictions - i - 1)
+#         H_mat = get_homograpy(four_pred[i], sz)  # (B,3,3)
+
+#         # warp the image center through H
+#         points = torch.tensor(
+#             [[[cx], [cy], [1.0]]],
+#             dtype=torch.float32, device=device
+#         ).repeat(B, 1, 1)   # (B,3,1)
+
+#         x = H_mat.bmm(points)
+#         x = x / x[:, 2:3, :]  # normalize
+#         x = x[:, 0:2, 0]      # (B,2) pixel coords
+
+#         # pixel-wise L2 loss, scaled like vigor_gps_loss
+#         i_loss = ((x - y) ** 2).mean()   # MSE over batch and 2 coords
+#         v_loss += i_weight * i_loss
+
+#     # Metrics: here you can define your own, e.g. mean |dx| and |dy| in meters,
+#     # or mean yaw error in degrees, derived back from four_pred if desired.
+#     metrics = {
+#         'pix_mse': v_loss.item(),
+#     }
+#     return v_loss, metrics
+
+def zod_homo_loss(four_pred, sat_img, rot_gt, trans_gt, resolution, gamma=0.85):
     B, _, H, W = sat_img.shape
     device = sat_img.device
-    sz = [B, 1, H, W]  # same convention as vigor_gps_loss
+    sz = [B, 1, H, W]
 
-    # Ground-truth pixel position of the *warped* center
-    # Start from image center as "reference point":
+    if isinstance(four_pred, list):
+        preds = four_pred
+    else:
+        preds = [four_pred]
+
+    # --- ground-truth center location in pixels ---
     cx = (W - 1) / 2.0
     cy = (H - 1) / 2.0
+    res = resolution.view(B, 1).to(device)
 
-    # Convert center to metric coords
-    res = resolution.view(B, 1).to(device)  # (B,1)
-    x_m = torch.zeros(B, 1, device=device)
-    y_m = torch.zeros(B, 1, device=device)
+    x0_m = torch.zeros(B, 1, device=device)
+    y0_m = torch.zeros(B, 1, device=device)
 
-    # Apply SE(2) in metric space
-    cos_t = rot_gt[:, 0, 0]
-    sin_t = rot_gt[:, 1, 0]
-    dx = trans_gt[:, 0]
-    dy = trans_gt[:, 1]
+    cos_t = rot_gt[:, 0, 0].view(B, 1)          # (B,1)
+    sin_t = rot_gt[:, 1, 0].view(B, 1)          # (B,1)
+    dx = trans_gt[:, 0].view(B, 1)              # (B,1)
+    dy = trans_gt[:, 1].view(B, 1)              # (B,1)
 
-    x_p = cos_t * x_m - sin_t * y_m + dx
-    y_p = sin_t * x_m + cos_t * y_m + dy
+    x1_m = cos_t * x0_m - sin_t * y0_m + dx   # (B,1)
+    y1_m = sin_t * x0_m + cos_t * y0_m + dy   # (B,1)
 
-    # Back to pixels
-    x_pix_p = x_p / res[:, 0] + cx
-    y_pix_p = y_p / res[:, 0] + cy
+    x_gt_pix = x1_m / res + cx     # (B,1)
+    y_gt_pix = y1_m / res + cy     # (B,1)
+    y = torch.cat([x_gt_pix, y_gt_pix], dim=1)  # (B,2)
 
-    # Ground-truth pixel target y: (B,2)
-    y = torch.stack([x_pix_p, y_pix_p], dim=1)  # (B,2)
+    # # DEBUG
+    # print("DEBUG zod_homo_loss: B,H,W =", B, H, W)
+    # print("  x_gt_pix shape:", x_gt_pix.shape)
+    # print("  y_gt_pix shape:", y_gt_pix.shape)
+    # print("  y shape:", y.shape)
+    # print("  cos_t:", cos_t.shape)
+    # print("  cos_t:", cos_t.shape)
+    # print("  x1_m:", x1_m.shape)
+    total_loss = 0.0
+    x_last = None
 
-    # Multi-iteration loss (same gamma weighting as vigor_gps_loss)
-    if isinstance(four_pred, list):
-        n_predictions = len(four_pred)
-    else:
-        four_pred = [four_pred]
-        n_predictions = 1
+    for i, four in enumerate(preds):
+        weight = gamma ** (len(preds) - i - 1)
+        H_mat = get_homograpy(four, sz)  # (B,3,3)
 
-    v_loss = 0.0
-    for i in range(n_predictions):
-        i_weight = gamma ** (n_predictions - i - 1)
-        H_mat = get_homograpy(four_pred[i], sz)  # (B,3,3)
-
-        # warp the image center through H
-        points = torch.tensor(
+        pts = torch.tensor(
             [[[cx], [cy], [1.0]]],
             dtype=torch.float32, device=device
-        ).repeat(B, 1, 1)   # (B,3,1)
+        ).repeat(B, 1, 1)               # (B,3,1)
 
-        x = H_mat.bmm(points)
-        x = x / x[:, 2:3, :]  # normalize
-        x = x[:, 0:2, 0]      # (B,2) pixel coords
+        x = H_mat.bmm(pts)              # (B,3,1)
+        x = x / x[:, 2:3, :]
+        x = x[:, 0:2, 0]                # (B,2)
 
-        # pixel-wise L2 loss, scaled like vigor_gps_loss
-        i_loss = ((x - y) ** 2).mean()   # MSE over batch and 2 coords
-        v_loss += i_weight * i_loss
+        # DEBUG
+        # print("  x shape at iter", i, ":", x.shape)
+        # assert x.shape == y.shape, f"Shape mismatch: x {x.shape}, y {y.shape}"
 
-    # Metrics: here you can define your own, e.g. mean |dx| and |dy| in meters,
-    # or mean yaw error in degrees, derived back from four_pred if desired.
+        i_loss = ((x - y) ** 2).mean()
+        total_loss = total_loss + weight * i_loss
+        x_last = x
+
+    # simple metric: pixel error and meter error from last prediction
+    err_pix = (x_last - y).detach()                 # (B,2)
+    err_pix_l2 = (err_pix ** 2).sum(dim=1).sqrt()
+
+    err_m = err_pix * res                           # (B,2)
+    err_m_l2 = (err_m ** 2).sum(dim=1).sqrt()
+
     metrics = {
-        'pix_mse': v_loss.item(),
+        "pix_l2": float(err_pix_l2.mean().item()),
+        "m_l2":   float(err_m_l2.mean().item()),
+        "pred_x_pix": float(x_last[:, 0].mean().item()),
+        "pred_y_pix": float(x_last[:, 1].mean().item()),
     }
-    return v_loss, metrics
-import torch
-import torch.nn.functional as F
-from models.utils.utils import get_homograpy
+    return total_loss, metrics
 
 def zod_se2_loss(four_pred, sat_img, rot_gt, trans_gt, resolution, gamma=0.85):
     """

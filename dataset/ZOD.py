@@ -110,7 +110,7 @@ class ZOD(torch.utils.data.Dataset):
         
         ####### For debugging, use only subset of training drives ########
         # task_data_subset = ["000009","000007"] 
-        # task_data_subset = task_data_subset[:5]
+        # task_data_subset = task_data_subset[:1]
         
         bad_samples = pd.read_csv("dataset/dataset_utils/bad_ids.csv")
 
@@ -202,7 +202,7 @@ class ZOD(torch.utils.data.Dataset):
                 if len(bad_samples.loc[(bad_samples.scene_name.astype(int) == drive_idx) & (bad_samples.name.astype(int) == frame_idx)]):
                     continue
                 
-                # if frame_idx > 100:
+                # if frame_idx > 30:
                 #     break
                 
                 # self.metadata_list.append([drive_idx,frame_idx, aerial_img_data_df.loc[(aerial_img_data_df.drive_idx.astype(int) == drive_idx) & (aerial_img_data_df.frame_idx == frame_idx), ['aerial_latlon', 'heading', 'aerial_image', 'resolution'] ].to_dict(orient='records')[0] ])
@@ -229,7 +229,7 @@ class ZOD(torch.utils.data.Dataset):
             
         image_rgb, points, resolution, focal, heading, intensity, metadata, success = self.open_vilsoc_outputs(index)
         # image_rgb_orig = image_rgb.copy()
-        data_dict['image_rgb_init'] = image_rgb.astype(np.float32) # for visualisation
+        # data_dict['image_rgb_init'] = image_rgb.astype(np.float32) # for visualisation
 
         
         if not success:
@@ -307,31 +307,49 @@ class ZOD(torch.utils.data.Dataset):
             drive_idx, frame_idx, _ = self.metadata_list[index]
             print(f"Empty BEV at index {[drive_idx, frame_idx]}")
             # log to bad_ids if you want, then
-            # return None
+            return None
         
-        ############## Save in dictionnary ###############
-        # infomation
-        data_dict['scene_name'] = metadata['scene_name']
-        data_dict['name'] = metadata['name']
+        image = img.astype(np.float32).copy()           # (3,H,W)
+        bev   = bev_lidar.astype(np.float32).copy()     # (C,H,W)
+        rot   = rotation.astype(np.float32).copy()      # (3,3)
+        trans = translation.astype(np.float32).copy()   # (3,)
+        res   = np.float32(resolution)                  # (1)        m/pix
 
-        # input data
-        data_dict['points'] = points.astype(np.float32)  # [N, 3]
-        data_dict['intensity'] = intensity.astype(np.float32)  # [N,]
-        data_dict['heading'] = np.float32(heading)  # angle deg
-
-        # for show
-        data_dict['image_rgb'] = image_rgb.astype(np.float32) # for visualisation
-        data_dict['image'] = img # for training
-
-        # lidar points transform
-        data_dict['rotation'] = rotation.astype(np.float32)  # [3, 3]
-        data_dict['translation'] = translation.astype(np.float32)  # [3, ]
-        data_dict['resolution'] = np.float32(resolution) # m/pix
-        
-        if bev_lidar is not None:
-            data_dict['bev_lidar'] = bev_lidar.astype(np.float32)  # [36, 480, 480]
-        
+        data_dict = {
+            "scene_name": metadata['scene_name'],
+            "name": metadata['name'],
+            "image":      torch.from_numpy(image),
+            "bev_lidar":  torch.from_numpy(bev),
+            "rotation":   torch.from_numpy(rot),
+            "translation":torch.from_numpy(trans),
+            "resolution": torch.tensor(res, dtype=torch.float32),
+            "heading":   torch.tensor(np.float32(heading), dtype=torch.float32),
+            }
         return data_dict
+        
+        # ############## Save in dictionnary ###############
+        # # infomation
+        # data_dict['scene_name'] = metadata['scene_name']
+        # data_dict['name'] = metadata['name']
+
+        # # input data
+        # data_dict['points'] = points.astype(np.float32)  # [N, 3]
+        # data_dict['intensity'] = intensity.astype(np.float32)  # [N,]
+        # data_dict['heading'] = np.float32(heading)  # angle deg
+
+        # # for show
+        # data_dict['image_rgb'] = image_rgb.astype(np.float32) # for visualisation
+        # data_dict['image'] = img # for training
+
+        # # lidar points transform
+        # data_dict['rotation'] = rotation.astype(np.float32)  # [3, 3]
+        # data_dict['translation'] = translation.astype(np.float32)  # [3, ]
+        # data_dict['resolution'] = np.float32(resolution) # m/pix
+        
+        # if bev_lidar is not None:
+        #     data_dict['bev_lidar'] = bev_lidar.astype(np.float32)  # [36, 480, 480]
+        
+        # return data_dict
 
 
     def zod_points_to_bev_pixor_like(self, points_xyz, points_r):
@@ -555,8 +573,8 @@ def fetch_dataloader(args, split='train'):
             train_dataset = ZOD(task='train', **zod_cfg)
             val_dataset   = ZOD(task='val',   **zod_cfg)
             
-            # train_dataset = Subset(train_dataset, [0,1,2,3,4,5,6,7,8,9])
-            # val_dataset   = Subset(val_dataset,   [0,1,2,3,4,5,6,7,8,9])
+            # train_dataset = Subset(train_dataset, [0,1,2,3,4])
+            # val_dataset   = Subset(val_dataset,   [0,1,2,3,4])
             print(f"Training with {len(train_dataset)} samples, validation with {len(val_dataset)} samples.")
             return train_dataset, val_dataset
 

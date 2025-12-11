@@ -1,41 +1,0 @@
-Loading infos: 0it [00:00, ?it/s]Loading infos: 1it [00:01,  1.07s/it]Loading infos: 29it [00:01, 27.06it/s]
-Processing ZOD Drives:   0%|[34m          [0m| 0/4869 [00:00<?, ?Frame/s]Processing ZOD Drives:   0%|[34m          [0m| 1/4869 [00:01<1:24:13,  1.04s/Frame]Processing ZOD Drives:   0%|[34m          [0m| 16/4869 [00:01<04:16, 18.94Frame/s] Processing ZOD Drives:   1%|[34m          [0m| 31/4869 [00:01<02:07, 37.83Frame/s]Processing ZOD Drives:   1%|[34m          [0m| 47/4869 [00:01<01:22, 58.30Frame/s]Processing ZOD Drives:   1%|[34m▏         [0m| 63/4869 [00:01<01:01, 77.60Frame/s]Processing ZOD Drives:   2%|[34m▏         [0m| 79/4869 [00:01<00:50, 94.60Frame/s]Processing ZOD Drives:   2%|[34m▏         [0m| 94/4869 [00:01<00:44, 106.62Frame/s]Processing ZOD Drives:   2%|[34m▏         [0m| 109/4869 [00:02<02:39, 29.81Frame/s]Processing ZOD Drives:   3%|[34m▎         [0m| 125/4869 [00:03<01:57, 40.53Frame/s]Processing ZOD Drives:   3%|[34m▎         [0m| 141/4869 [00:03<01:29, 52.88Frame/s]Processing ZOD Drives:   3%|[34m▎         [0m| 157/4869 [00:03<01:10, 66.66Frame/s]Processing ZOD Drives:   4%|[34m▎         [0m| 173/4869 [00:03<00:57, 80.99Frame/s]Processing ZOD Drives:   4%|[34m▍         [0m| 189/4869 [00:03<00:49, 95.17Frame/s]Processing ZOD Drives:   4%|[34m▍         [0m| 202/4869 [00:03<01:21, 57.05Frame/s]
-Loading infos: 0it [00:00, ?it/s]Loading infos: 1it [00:00,  1.13it/s]Loading infos: 29it [00:00, 32.78it/s]
-Processing ZOD Drives:   0%|[34m          [0m| 0/4869 [00:00<?, ?Frame/s]Processing ZOD Drives:   0%|[34m          [0m| 1/4869 [00:00<1:14:06,  1.09Frame/s]Processing ZOD Drives:   0%|[34m          [0m| 16/4869 [00:01<03:50, 21.06Frame/s] Processing ZOD Drives:   1%|[34m          [0m| 31/4869 [00:01<01:56, 41.43Frame/s]Processing ZOD Drives:   1%|[34m          [0m| 45/4869 [00:01<01:21, 59.16Frame/s]Processing ZOD Drives:   1%|[34m          [0m| 60/4869 [00:01<01:02, 76.97Frame/s]Processing ZOD Drives:   2%|[34m▏         [0m| 75/4869 [00:01<00:51, 92.39Frame/s]Processing ZOD Drives:   2%|[34m▏         [0m| 90/4869 [00:01<00:45, 104.93Frame/s]Processing ZOD Drives:   2%|[34m▏         [0m| 104/4869 [00:02<02:02, 38.85Frame/s]Processing ZOD Drives:   2%|[34m▏         [0m| 120/4869 [00:02<01:31, 52.04Frame/s]Processing ZOD Drives:   3%|[34m▎         [0m| 136/4869 [00:02<01:11, 66.56Frame/s]Processing ZOD Drives:   3%|[34m▎         [0m| 152/4869 [00:02<00:57, 81.54Frame/s]Processing ZOD Drives:   3%|[34m▎         [0m| 168/4869 [00:02<00:49, 95.59Frame/s]Processing ZOD Drives:   4%|[34m▍         [0m| 184/4869 [00:02<00:43, 108.93Frame/s]Processing ZOD Drives:   4%|[34m▍         [0m| 200/4869 [00:03<00:38, 120.47Frame/s]Processing ZOD Drives:   4%|[34m▍         [0m| 202/4869 [00:03<01:10, 66.64Frame/s] 
-Traceback (most recent call last):
-  File "/home/finckh/VITA/HC-Net/train.py", line 318, in <module>
-    train(config)
-  File "/home/finckh/VITA/HC-Net/train.py", line 126, in train
-    for i_batch, data_blob in enumerate(train_loader):
-  File "/home/finckh/miniconda3/envs/dg/lib/python3.10/site-packages/torch/utils/data/dataloader.py", line 701, in __next__
-    data = self._next_data()
-  File "/home/finckh/miniconda3/envs/dg/lib/python3.10/site-packages/torch/utils/data/dataloader.py", line 1465, in _next_data
-    return self._process_data(data)
-  File "/home/finckh/miniconda3/envs/dg/lib/python3.10/site-packages/torch/utils/data/dataloader.py", line 1491, in _process_data
-    data.reraise()
-  File "/home/finckh/miniconda3/envs/dg/lib/python3.10/site-packages/torch/_utils.py", line 715, in reraise
-    raise exception
-RuntimeError: Caught RuntimeError in DataLoader worker process 0.
-Original Traceback (most recent call last):
-  File "/home/finckh/miniconda3/envs/dg/lib/python3.10/site-packages/torch/utils/data/_utils/worker.py", line 351, in _worker_loop
-    data = fetcher.fetch(index)  # type: ignore[possibly-undefined]
-  File "/home/finckh/miniconda3/envs/dg/lib/python3.10/site-packages/torch/utils/data/_utils/fetch.py", line 55, in fetch
-    return self.collate_fn(data)
-  File "/home/finckh/VITA/HC-Net/train.py", line 56, in zod_collate_fn
-    return default_collate(batch)
-  File "/home/finckh/miniconda3/envs/dg/lib/python3.10/site-packages/torch/utils/data/_utils/collate.py", line 398, in default_collate
-    return collate(batch, collate_fn_map=default_collate_fn_map)
-  File "/home/finckh/miniconda3/envs/dg/lib/python3.10/site-packages/torch/utils/data/_utils/collate.py", line 171, in collate
-    {
-  File "/home/finckh/miniconda3/envs/dg/lib/python3.10/site-packages/torch/utils/data/_utils/collate.py", line 172, in <dictcomp>
-    key: collate(
-  File "/home/finckh/miniconda3/envs/dg/lib/python3.10/site-packages/torch/utils/data/_utils/collate.py", line 155, in collate
-    return collate_fn_map[elem_type](batch, collate_fn_map=collate_fn_map)
-  File "/home/finckh/miniconda3/envs/dg/lib/python3.10/site-packages/torch/utils/data/_utils/collate.py", line 285, in collate_numpy_array_fn
-    return collate([torch.as_tensor(b) for b in batch], collate_fn_map=collate_fn_map)
-  File "/home/finckh/miniconda3/envs/dg/lib/python3.10/site-packages/torch/utils/data/_utils/collate.py", line 155, in collate
-    return collate_fn_map[elem_type](batch, collate_fn_map=collate_fn_map)
-  File "/home/finckh/miniconda3/envs/dg/lib/python3.10/site-packages/torch/utils/data/_utils/collate.py", line 272, in collate_tensor_fn
-    return torch.stack(batch, 0, out=out)
-RuntimeError: stack expects each tensor to be equal size, but got [1492, 1492, 3] at entry 0 and [1493, 1492, 3] at entry 1
-

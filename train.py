@@ -84,6 +84,7 @@ def train(args):
 
     train_dataset, val_dataset = datasets.fetch_dataloader(args)
     nw = min([os.cpu_count(), args.batch_size if args.batch_size > 1 else 0, 12])  # number of workers
+    # nw = 0  # debug
     print('Using {} dataloader workers every process'.format(nw)) # https://blog.csdn.net/ResumeProject/article/details/125449639
     train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,pin_memory=True, num_workers=nw, collate_fn=zod_collate_fn,)
     val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False,pin_memory=True, num_workers=nw, collate_fn=zod_collate_fn,)
@@ -171,7 +172,7 @@ def train(args):
             )
             loss = loss_h    # for now, no corr_loss   
             
-            loss_RTE, supervision_zod = zod_se2_loss(
+            loss_RTE, supervision_zod_RTE = zod_se2_loss(
                 four_pred, sat_img,
                 rot_gt=rot_gt,
                 trans_gt=trans_gt,
@@ -203,9 +204,16 @@ def train(args):
             logger.push(metrics)
             
             ############################################################################################
-            print('\033[1;94m'+'Epoch: [{}/{}], Loss: {}, RTE: {}, Pred dx,dy: {}, GT {}. \033[0m'
-                  .format(epoch+1, num_epochs, loss.cpu().item(), loss_RTE.cpu().item(), 
-                          (supervision_zod["pred_dx_m"],supervision_zod["pred_dy_m"]),trans_gt[:,0:2][0].cpu().numpy()))
+            # print('\033[1;94m'+'Epoch: [{}/{}], Loss: {}, RTE: {}, Pred dx,dy: {}, GT {}. \033[0m'
+            #       .format(epoch+1, num_epochs, loss.cpu().item(), loss_RTE.cpu().item(), 
+            #               (supervision_zod_RTE["pred_dx_m"],supervision_zod_RTE["pred_dy_m"]),trans_gt[:,0:2][0].cpu().numpy()))
+            gt = trans_gt[:,0:2][0].cpu().numpy()
+            print(
+                f'Epoch: [{epoch+1}/{num_epochs}], Loss: {loss.cpu().item():.1f}, '
+                f'RTE: {loss_RTE.cpu().item():.2f}, '
+                f'Pred (dx,dy): ({supervision_zod_RTE["pred_dx_m"]:.2f}, {supervision_zod_RTE["pred_dy_m"]:.2f}), '
+                f'GT: ({gt[0]:.2f}, {gt[1]:.2f})'
+            )
             ############################################################################################
 
             if total_steps %  args.IMG_FREQ == args.IMG_FREQ-1:
