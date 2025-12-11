@@ -11,7 +11,7 @@
     "orig_label": false,
     "cross_area": false,
 
-    "batch_size": 1,
+    "batch_size": 5,
     "lr": 0.00035,
     "num_steps": 180000,
     "scheduler": "OneCycle",

@@ -5,7 +5,7 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=20         # << ask for 20 CPUs
 #SBATCH --gres=gpu:1               # request 1 GPU
-#SBATCH --mem=50G                 # << increased memory from 50G to 80GB
+#SBATCH --mem=10G                 # << increased memory from 50G to 80GB
 #SBATCH --time=2:00:00            # << set a realistic training time
 #SBATCH --output=/home/finckh/VITA/HC-Net/logs/log_%j.log
 #SBATCH --error=/home/finckh/VITA/HC-Net/logs/err_%j.log
