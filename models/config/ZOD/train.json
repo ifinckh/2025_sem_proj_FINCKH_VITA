@@ -42,7 +42,7 @@
     "SUM_FREQ": 100,
 
 
-    "use_augmentation" : true,
+    "use_augmentation" : false,
     "image_area_dg_m" : 51.2,
     "image_area_zod_m" : 100,
     "max_translation" : 15.0,

@@ -170,6 +170,16 @@ def train(args):
                 gamma=args.gamma
             )
             loss = loss_h    # for now, no corr_loss   
+            
+            loss_RTE, supervision_zod = zod_se2_loss(
+                four_pred, sat_img,
+                rot_gt=rot_gt,
+                trans_gt=trans_gt,
+                resolution=resolution,
+                gamma=args.gamma,
+            )
+
+            
 
             # Backward and Optimze
             scaler.scale(loss).backward()
@@ -191,6 +201,12 @@ def train(args):
 
             metrics.update({'loss': loss.cpu().item()})
             logger.push(metrics)
+            
+            ############################################################################################
+            print('\033[1;94m'+'Epoch: [{}/{}], Loss: {}, RTE: {}, Pred dx,dy: {}, GT {}. \033[0m'
+                  .format(epoch+1, num_epochs, loss.cpu().item(), loss_RTE.cpu().item(), 
+                          (supervision_zod["pred_dx_m"],supervision_zod["pred_dy_m"]),trans_gt[:,0:2][0].cpu().numpy()))
+            ############################################################################################
 
             if total_steps %  args.IMG_FREQ == args.IMG_FREQ-1:
                 H = get_homograpy(four_pred[-1],  image1.shape)
@@ -223,8 +239,8 @@ def train(args):
         elif args.scheduler == 'Cosine':
             scheduler.step()
 
-        print('\033[1;94m'+'Epoch: [{}/{}], Loss: {}. \033[0m'
-                  .format(epoch+1, num_epochs, val_mdis.item()))        
+        # print('\033[1;94m'+'Epoch: [{}/{}], Loss: {}. \033[0m'
+        #           .format(epoch+1, num_epochs, val_mdis.item())        
         if val_mdis < best_dis:
             best_dis = val_mdis
             checkpoint = {

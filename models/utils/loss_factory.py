@@ -258,3 +258,114 @@ def zod_homo_loss(four_pred, sat_img, rot_gt, trans_gt, resolution,
         'pix_mse': v_loss.item(),
     }
     return v_loss, metrics
+import torch
+import torch.nn.functional as F
+from models.utils.utils import get_homograpy
+
+def zod_se2_loss(four_pred, sat_img, rot_gt, trans_gt, resolution, gamma=0.85):
+    """
+    four_pred: list of (B,2,2,2) homography corner displacements from HCNet
+    sat_img:   (B,3,H,W) satellite input (only H,W used)
+    rot_gt:    (B,3,3) ground-truth SE(2) rotation (only yaw used)
+    trans_gt:  (B,3)   ground-truth translation [tx, ty, tz] in meters
+    resolution:(B,)    meters per pixel
+    Returns:
+        loss:    scalar tensor
+        metrics: dict with translation/yaw predictions and errors
+    """
+    B, _, H, W = sat_img.shape
+    device = sat_img.device
+    sz = [B, 1, H, W]
+
+    if isinstance(four_pred, list):
+        preds = four_pred
+    else:
+        preds = [four_pred]
+
+    txy_gt = trans_gt[:, :2]              # (B,2)
+    res = resolution.view(B, 1).to(device)
+
+    # ground-truth yaw in degrees from rot_gt
+    yaw_gt = torch.rad2deg(torch.atan2(rot_gt[:, 1, 0], rot_gt[:, 0, 0]))  # (B,)
+
+    total_loss = 0.0
+    txy_pred_last = None
+    yaw_pred_last = None
+
+    for i, four in enumerate(preds):
+        weight = gamma ** (len(preds) - i - 1)
+
+        # homography from predicted corner displacements
+        H_mat = get_homograpy(four, sz)        # (B,3,3)
+
+        # ---- translation from homography (center shift) ----
+        cx = (W - 1) / 2.0
+        cy = (H - 1) / 2.0
+        pts = torch.tensor(
+            [[[cx], [cy], [1.0]]],
+            dtype=torch.float32,
+            device=device
+        ).repeat(B, 1, 1)                      # (B,3,1)
+
+        x = H_mat.bmm(pts)                     # (B,3,1)
+        x = x / x[:, 2:3, :]                   # normalize
+        x = x[:, 0:2, 0]                       # (B,2), pixel coords
+
+        dpix = x - torch.tensor(
+            [cx, cy], dtype=torch.float32, device=device
+        ).view(1, 2)                           # (B,2)
+
+        txy_pred = dpix * res                  # (B,2) meters
+
+        # ---- yaw from homography ----
+        # apply H to center and a point a bit above center to recover orientation
+        pts2 = torch.tensor(
+            [[[cx], [cy - 10.0], [1.0]]],
+            dtype=torch.float32,
+            device=device
+        ).repeat(B, 1, 1)                      # (B,3,1)
+
+        x2 = H_mat.bmm(pts2)
+        x2 = x2 / x2[:, 2:3, :]
+        x2 = x2[:, 0:2, 0]                     # (B,2)
+
+        # vector from center to "up" point in warped frame
+        v = x2 - x                             # (B,2)
+        yaw_pred = torch.rad2deg(torch.atan2(v[:, 0], -v[:, 1]))  # (B,)
+
+        # ---- SE(2) loss: translation + yaw ----
+        err_t = txy_pred - txy_gt             # (B,2)
+        trans_l2 = (err_t ** 2).sum(dim=1).sqrt()  # (B,)
+
+        err_yaw = yaw_pred - yaw_gt
+        # wrap to [-180,180]
+        err_yaw = (err_yaw + 180.0) % 360.0 - 180.0
+
+        # simple weighted sum (tune weights as needed)
+        loss_i = trans_l2.mean() + 0.01 * err_yaw.abs().mean()
+        total_loss = total_loss + weight * loss_i
+
+        # remember last prediction for metrics
+        txy_pred_last = txy_pred
+        yaw_pred_last = yaw_pred
+
+    # metrics from last prediction
+    err_t_last = (txy_pred_last - txy_gt).detach()
+    trans_l2_last = (err_t_last ** 2).sum(dim=1).sqrt()
+    err_yaw_last = (yaw_pred_last - yaw_gt).detach()
+    err_yaw_last = (err_yaw_last + 180.0) % 360.0 - 180.0
+
+    metrics = {
+        "trans_l2_m":       float(trans_l2_last.mean().item()),
+        "trans_abs_dx_m":   float(err_t_last[:, 0].abs().mean().item()),
+        "trans_abs_dy_m":   float(err_t_last[:, 1].abs().mean().item()),
+        "pred_dx_m":        float(txy_pred_last[:, 0].mean().item()),
+        "pred_dy_m":        float(txy_pred_last[:, 1].mean().item()),
+        "gt_dx_m":          float(txy_gt[:, 0].mean().item()),
+        "gt_dy_m":          float(txy_gt[:, 1].mean().item()),
+        "yaw_err_deg":      float(err_yaw_last.abs().mean().item()),
+        "pred_yaw_deg":     float(yaw_pred_last.mean().item()),
+        "gt_yaw_deg":       float(yaw_gt.mean().item()),
+    }
+
+    return total_loss, metrics
