@@ -10,6 +10,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import json
 from easydict import EasyDict
+from datetime import datetime
 
 import torch
 import torch.nn as nn
@@ -55,6 +56,33 @@ def zod_collate_fn(batch):
         return None
     return default_collate(batch)
 
+import csv
+import os
+
+def log_metrics_csv(filepath, epoch, iteration, loss, rte):
+    """
+    Append training metrics to a CSV file.
+
+    Args:
+        filepath (str): Path to the CSV file.
+        epoch (int): Current epoch.
+        iteration (int): Iteration number within the epoch.
+        loss (float): Training loss.
+        rte (float): RTE metric (or any other metric you'd like to track).
+    """
+
+    # Check if file already exists
+    file_exists = os.path.isfile(filepath)    
+    with open(filepath, mode="a", newline="") as f:
+        writer = csv.writer(f)
+
+        # Write header if new file
+        if not file_exists:
+            writer.writerow(["epoch", "batch", "loss", "rte"])
+
+        # Append data row
+        writer.writerow([epoch, iteration, loss, rte])
+
 
 def count_parameters(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -78,6 +106,36 @@ def fetch_optimizer(args, model):
     
 
 def train(args):
+    
+    if True:
+        date_str = datetime.now().strftime("%Y_%m_%d")
+        csv_folder = "metrics/train/"
+        # Find available test number folder
+        test_num = 0
+        while True:
+            file_path = os.path.join(csv_folder, f"{date_str}_{test_num}.csv")
+            if not os.path.exists(file_path):
+                break
+            test_num += 1
+        train_metrics_file_path = file_path
+        csv_folder = "metrics/val/"
+        # Find available test number folder
+        test_num = 0
+        while True:
+            file_path = os.path.join(csv_folder, f"{date_str}_{test_num}.csv")
+            if not os.path.exists(file_path):
+                break
+            test_num += 1
+        val_metrics_file_path = file_path
+        csv_folder = "metrics/test/"
+        # Find available test number folder
+        test_num = 0
+        while True:
+            file_path = os.path.join(csv_folder, f"{date_str}_{test_num}.csv")
+            if not os.path.exists(file_path):
+                break
+            test_num += 1
+        test_metrics_file_path = file_path
 
     model = nn.DataParallel(HCNet(args), device_ids=args.gpuid)
     print("Parameter Count: %d" % count_parameters(model))
@@ -152,16 +210,7 @@ def train(args):
             #     orien = args.dataset == 'vigor' and args.orien, transformed_center = transformed_center, sz = [image1.shape[2],image1.shape[3]] ,gamma=args.gamma)
             # loss2 = corr_loss(grd_gps, sat_gps, corr_fn, infoLoss,  args=args, sat_delta = sat_delta, transformed_center = transformed_center, sz = [image1.shape[2],image1.shape[3]])
             
-            # loss = loss*w1 + loss2*w2
-            
-            # ----- GPT's initial proposed loss -----
-            # B, _, H_img, W_img = sat_img.shape
-            # four_gt = zod_four_point_gt(rot_gt, trans_gt, resolution, H_img, W_img, sat_img.device)
-
-            # # four_pred is a list of predictions across iterations; use the last one
-            # four_last = four_pred[-1]  # (B, 2, 2, 2)
-
-            # loss = F.smooth_l1_loss(four_last, four_gt)         
+            # loss = loss*w1 + loss2*w2     
             
             # ----- adapted from vigor_gps_loss using GPT -----
             loss_h, metrics = zod_homo_loss(
@@ -207,13 +256,16 @@ def train(args):
             # print('\033[1;94m'+'Epoch: [{}/{}], Loss: {}, RTE: {}, Pred dx,dy: {}, GT {}. \033[0m'
             #       .format(epoch+1, num_epochs, loss.cpu().item(), loss_RTE.cpu().item(), 
             #               (supervision_zod_RTE["pred_dx_m"],supervision_zod_RTE["pred_dy_m"]),trans_gt[:,0:2][0].cpu().numpy()))
-            gt = trans_gt[:,0:2][0].cpu().numpy()
-            print(
-                f'Epoch: [{epoch+1}/{num_epochs}], Loss: {loss.cpu().item():.1f}, '
-                f'RTE: {loss_RTE.cpu().item():.2f}, '
-                f'Pred (dx,dy): ({supervision_zod_RTE["pred_dx_m"]:.2f}, {supervision_zod_RTE["pred_dy_m"]:.2f}), '
-                f'GT: ({gt[0]:.2f}, {gt[1]:.2f})'
-            )
+            # gt = trans_gt[:,0:2][0].cpu().numpy()
+            
+            # print(
+            #     f'Epoch: [{epoch+1}/{num_epochs}], Loss: {loss.cpu().item():.1f}, '
+            #     f'RTE: {loss_RTE.cpu().item():.2f}, '
+            #     f'Pred (dx,dy): ({supervision_zod_RTE["pred_dx_m"]:.2f}, {supervision_zod_RTE["pred_dy_m"]:.2f}), '
+            #     f'GT: ({gt[0]:.2f}, {gt[1]:.2f})'
+            # )
+            
+            log_metrics_csv(train_metrics_file_path,epoch, i_batch, loss.cpu().item(), loss_RTE.cpu().item())
             ############################################################################################
 
             if total_steps %  args.IMG_FREQ == args.IMG_FREQ-1:
@@ -230,11 +282,12 @@ def train(args):
             if total_steps > args.num_steps:
                 should_keep_training = False
                 break
+
         
         if epoch % 2 == 1 and not epoch >= num_epochs:     
             if args.scheduler == 'Cosine':
                 scheduler.step()
-            epoch+=1     
+            epoch+=1
             continue
 
 
