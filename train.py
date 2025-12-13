@@ -268,15 +268,15 @@ def train(args):
             log_metrics_csv(train_metrics_file_path,epoch, i_batch, loss.cpu().item(), loss_RTE.cpu().item())
             ############################################################################################
 
-            if total_steps %  args.IMG_FREQ == args.IMG_FREQ-1:
-                H = get_homograpy(four_pred[-1],  image1.shape)
-                H = H.detach().cpu().numpy()
-                image1 = image1[0].permute(1, 2,0).detach().cpu().numpy()
-                image0 = image2[0].permute(1, 2,0).detach().cpu().numpy()
-                plt.figure(figsize=(10,10))
-                result = show_overlap(image1, image0, H[0])
-                cv2.imwrite('./watch/' + "result_" + args.name + '.png',result[:,:,::-1])
-                print("save at: {}".format('./watch/' + "result_" + args.name + '.png'))
+            # if total_steps %  args.IMG_FREQ == args.IMG_FREQ-1:
+            #     H = get_homograpy(four_pred[-1],  image1.shape)
+            #     H = H.detach().cpu().numpy()
+            #     image1 = image1[0].permute(1, 2,0).detach().cpu().numpy()
+            #     image0 = image2[0].permute(1, 2,0).detach().cpu().numpy()
+            #     plt.figure(figsize=(10,10))
+            #     result = show_overlap(image1, image0, H[0])
+            #     cv2.imwrite('./watch/' + "result_" + args.name + '.png',result[:,:,::-1])
+            #     print("save at: {}".format('./watch/' + "result_" + args.name + '.png'))
             total_steps += 1
 
             if total_steps > args.num_steps:
