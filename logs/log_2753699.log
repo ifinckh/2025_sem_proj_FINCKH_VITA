@@ -1,0 +1,22 @@
+{'gpuid': [0], 'mixed_precision': False, 'iters_lev0': 6, 'lev0': True, 'flow': True, 'p_siamese': True, 'CNN16': True, 'dataset': 'zod', 'orig_label': False, 'cross_area': False, 'batch_size': 5, 'lr': 0.00035, 'num_steps': 190252, 'scheduler': 'OneCycle', 'loss_w': [0.1, 1.0, 10.0], 'temperature': 4.0, 'augment': False, 'ori_noise': 45.0, 'orien': True, 'restore_ckpt': None, 'model': None, 'wdecay': 0.0005, 'epsilon': 1e-07, 'clip': 1.0, 'gamma': 0.85, 'name': 'zod', 'validation': None, 'image_size': 512, 'sat_size': 512, 'zoom': 20, 'IMG_FREQ': 20000, 'SUM_FREQ': 100, 'use_augmentation': True, 'image_area_dg_m': 51.2, 'image_area_zod_m': 100, 'max_translation': 15.0, 'max_rot_deg': 20.0, 'z_range': [-2.5, 3.0], 'BEV_grid_resolution': 0.1, 'lidar_dataset_root': '/work/vita/datasets/zod', 'aerial_img_dataset_root': '/work/vita/datasets/zod_crossview_processed_100m', 'version': 'full', 'config': '/home/finckh/VITA/HC-Net/models/config/ZOD/train.json', 'best_dis': 100000000.0, 'start_step': 0}
+[31m2025-12-17 19:19:05[0m
+Loaded pretrained weights for efficientnet-b0
+Parameter Count: 7754186
+Loading train split : 23 drives
+Loading val split : 6 drives
+Training with 47407 samples, validation with 10393 samples.
+Using 5 dataloader workers every process
+Best distance so far 100000000.0.
+[34mLog will be saved to:./watch/zod/zod_20251217_192542.log[0m
+[   100, 100/9482, 0.0000175] 3155.6400, 11.3383, 113.3829, 0.1794, -0.0987, 9.7316, 
+[   200, 200/9482, 0.0000210] 3209.6567, 11.4223, 114.2227, 0.1445, -1.0333, 9.7460, 
+[   300, 300/9482, 0.0000246] 2997.5310, 11.0162, 110.1620, 0.2243, 0.4324, 9.6103, 
+[   400, 400/9482, 0.0000281] 2776.6859, 10.2978, 102.9776, 0.1241, 0.3903, 10.3782, 
+[   500, 500/9482, 0.0000316] 2566.1946, 9.5305, 95.3049, -0.0248, 1.4124, 9.8474, 
+[   600, 600/9482, 0.0000351] 2359.8813, 8.7806, 87.8064, 0.1126, 0.2955, 9.8457, 
+[   700, 700/9482, 0.0000387] 2128.2303, 7.8419, 78.4191, -0.3445, -1.1583, 10.0436, 
+[   800, 800/9482, 0.0000422] 1993.3424, 7.3797, 73.7972, -0.2016, 0.5900, 10.6711, 
+[   900, 900/9482, 0.0000457] 2004.3704, 7.3668, 73.6685, 0.0620, -0.1385, 9.8625, 
+[  1000,1000/9482, 0.0000493] 1875.6207, 6.8332, 68.3320, 0.0604, -0.3447, 10.1344, 
+[  1100,1100/9482, 0.0000528] 1749.5978, 6.3575, 63.5747, 0.1290, 0.7006, 10.1770, 
+[  1200,1200/9482, 0.0000563] 1631.1632, 5.8788, 58.7883, -0.0375, -0.0317, 9.9425, 

@@ -110,7 +110,7 @@ class ZOD(torch.utils.data.Dataset):
         
         ####### For debugging, use only subset of training drives ########
         # task_data_subset = ["000009","000007"] 
-        # task_data_subset = task_data_subset[:1]
+        # task_data_subset = task_data_subset[3:5]
         
         bad_samples = pd.read_csv("dataset/dataset_utils/bad_ids.csv")
 
@@ -121,7 +121,7 @@ class ZOD(torch.utils.data.Dataset):
             total_frames += len(self.zod_drives[task_data_subset[i]].info.camera_frames['front_blur']) 
         
         # Create single progress bar
-        pbar = tqdm(total=total_frames, desc="Processing ZOD Drives", unit="Frame", colour="blue")
+        # pbar = tqdm(total=total_frames, desc="Processing ZOD Drives", unit="Frame", colour="blue")
         
         # for drive_key in list(task_data_subset):
         for drive_key in task_data_subset:
@@ -209,15 +209,15 @@ class ZOD(torch.utils.data.Dataset):
 
                 
                 # use only subsample of frames for faster training
-                # if frame_idx % 4 == 0:
+                # if frame_idx % 10 == 0:
                 #     self.metadata_list.append([drive_idx,frame_idx, aerial_img_data_df.loc[(aerial_img_data_df.drive_idx.astype(int) == drive_idx) & (aerial_img_data_df.frame_idx == frame_idx), ['aerial_latlon', 'heading', 'aerial_image', 'resolution'] ].to_dict(orient='records')[0] ])
                 # else:
                 #     continue
                 
                 self.metadata_list.append([drive_idx,frame_idx, aerial_img_data_df.loc[(aerial_img_data_df.drive_idx.astype(int) == drive_idx) & (aerial_img_data_df.frame_idx == frame_idx), ['aerial_latlon', 'heading', 'aerial_image', 'resolution'] ].to_dict(orient='records')[0] ])
-                pbar.update(1)
+                # pbar.update(1)
                 
-        pbar.close()
+        # pbar.close()
             
 
     def __len__(self):
@@ -314,6 +314,13 @@ class ZOD(torch.utils.data.Dataset):
         rot   = rotation.astype(np.float32).copy()      # (3,3)
         trans = translation.astype(np.float32).copy()   # (3,)
         res   = np.float32(resolution)                  # (1)        m/pix
+        # subsample 30000 points
+        choice = np.random.choice(points.shape[0], 30000, replace=False)
+        points_subsampled = points[choice].astype(np.float32).copy()  # [30k, 3]
+        intensity_subsampled = intensity[choice].astype(np.float32).copy()  # [30k,]
+    
+
+         ############## Save in dictionnary ###############
 
         data_dict = {
             "scene_name": metadata['scene_name'],
@@ -324,32 +331,10 @@ class ZOD(torch.utils.data.Dataset):
             "translation":torch.from_numpy(trans),
             "resolution": torch.tensor(res, dtype=torch.float32),
             "heading":   torch.tensor(np.float32(heading), dtype=torch.float32),
+            "points":     torch.from_numpy(points_subsampled),
+            "intensity":  torch.from_numpy(intensity_subsampled),
             }
         return data_dict
-        
-        # ############## Save in dictionnary ###############
-        # # infomation
-        # data_dict['scene_name'] = metadata['scene_name']
-        # data_dict['name'] = metadata['name']
-
-        # # input data
-        # data_dict['points'] = points.astype(np.float32)  # [N, 3]
-        # data_dict['intensity'] = intensity.astype(np.float32)  # [N,]
-        # data_dict['heading'] = np.float32(heading)  # angle deg
-
-        # # for show
-        # data_dict['image_rgb'] = image_rgb.astype(np.float32) # for visualisation
-        # data_dict['image'] = img # for training
-
-        # # lidar points transform
-        # data_dict['rotation'] = rotation.astype(np.float32)  # [3, 3]
-        # data_dict['translation'] = translation.astype(np.float32)  # [3, ]
-        # data_dict['resolution'] = np.float32(resolution) # m/pix
-        
-        # if bev_lidar is not None:
-        #     data_dict['bev_lidar'] = bev_lidar.astype(np.float32)  # [36, 480, 480]
-        
-        # return data_dict
 
 
     def zod_points_to_bev_pixor_like(self, points_xyz, points_r):
@@ -523,73 +508,50 @@ class ZOD(torch.utils.data.Dataset):
             success = False
         
         return bev_image, points_m, resolution, focal, aerial_heading, intensity, {'scene_name': drive_idx ,'name': frame_idx}, success
-    
-        ## For plotting overlapping lidar and image
-        # fig, axs = plt.subplots(1)
-        # points = points_m[:, :2]
-        # temp_pcd_rot_pix = ((points - translation) @ rotation_matrix.T / resolution).astype(int)
-        # # temp_pcd_rot_pix = np.clip(temp_pcd_rot_pix, 0, W - 1)
 
-        # x_ind = np.clip(W//2 + temp_pcd_rot_pix[:,0], 0, W - 1)
-        # y_ind = np.clip(H//2 - temp_pcd_rot_pix[:,1], 0, H - 1)
-
-        # axs.imshow(bev_image, origin='upper')
-        # axs.scatter(x_ind, y_ind, s=0.1, c='purple', alpha=0.3, label="LiDAR Points")
-        # # axs[0].quiver(W / 2, H / 2, np.sin(np.radians(heading_move)), np.cos(np.radians(heading_move)), color='cyan', scale=20, label='Movement')
-        # axs.quiver(W//2 - translation[0]/resolution, H//2 + translation[1]/resolution , np.sin(np.radians(aerial_heading)), np.cos(np.radians(aerial_heading)), color='r', scale=20, label='OXTS Heading')
-        # axs.legend(loc=2)
-        # axs.axis('off')
-        # axs.set_title('Aerial Image from Cross-View Dataset')
-        
-        # if method == "normal":
-        #     return bev_image, points_m, translation, rotation_matrix, resolution, focal, {'scene_name': drive_idx ,'name': frame_idx}
-        # elif method == "transformed":
-        #     points_m[:2,:2] =  points_m[:2,:2] @ rotation_matrix.T
-
-# from torch.utils.data import Subset
 def fetch_dataloader(args, split='train'):
     """
     For ZOD:
       - if split == 'train': return (train_dataset, val_dataset)
       - else: return a single dataset (usually 'val' for evaluation)
     """
-    if args.dataset == 'zod':
-        # Build config dict for your ZOD class from args.data
-        zod_cfg = {
-            "lidar_dataset_root": args.lidar_dataset_root,
-            "aerial_img_dataset_root": args.aerial_img_dataset_root,
-            "version": args.version,
-            "use_augmentation": args.use_augmentation if split == 'train' else False,
-            "image_size": args.image_size,
-            "image_area_dg_m": args.image_area_dg_m,
-            "image_area_zod_m": args.image_area_zod_m,
-            "max_translation": args.max_translation,
-            "max_rot_deg": args.max_rot_deg,
-            "z_range": args.z_range,
-            "BEV_grid_resolution": args.BEV_grid_resolution,
-        }
+    # Build config dict for your ZOD class from args.data
+    zod_cfg = {
+        "lidar_dataset_root": args.lidar_dataset_root,
+        "aerial_img_dataset_root": args.aerial_img_dataset_root,
+        "version": args.version,
+        "use_augmentation": args.use_augmentation, # if split == 'train' else False,
+        "image_size": args.image_size,
+        "image_area_dg_m": args.image_area_dg_m,
+        "image_area_zod_m": args.image_area_zod_m,
+        "max_translation": args.max_translation,
+        "max_rot_deg": args.max_rot_deg,
+        "z_range": args.z_range,
+        "BEV_grid_resolution": args.BEV_grid_resolution,
+    }
 
-        if split == 'train':
-            train_dataset = ZOD(task='train', **zod_cfg)
-            val_dataset   = ZOD(task='val',   **zod_cfg)
-            
-            # train_dataset = Subset(train_dataset, [0,1,2,3,4])
-            # val_dataset   = Subset(val_dataset,   [0,1,2,3,4])
-            print(f"Training with {len(train_dataset)} samples, validation with {len(val_dataset)} samples.")
-            return train_dataset, val_dataset
+    if split == 'train':
+        train_dataset = ZOD(task='train', **zod_cfg)
+        val_dataset   = ZOD(task='val',   **zod_cfg)
+        
+        # from torch.utils.data import Subset
+        # train_dataset = Subset(train_dataset, [0,1,2,3,4])
+        # val_dataset   = Subset(val_dataset,   [0,1,2,3,4])
+        print(f"Training with {len(train_dataset)} samples, validation with {len(val_dataset)} samples.")
+        return train_dataset, val_dataset
 
-        elif split in ['val', 'validation']:
-            val_dataset = ZOD(task='val', **zod_cfg)
-            print(f"Validation with {len(val_dataset)} samples.")
-            return val_dataset
+    elif split in ['val', 'validation']:
+        val_dataset = ZOD(task='val', **zod_cfg)
+        print(f"Validation with {len(val_dataset)} samples.")
+        return val_dataset
 
-        elif split == 'test':
-            test_dataset = ZOD(task='test', **zod_cfg)
-            print(f"Test with {len(test_dataset)} samples.")
-            return test_dataset
+    elif split == 'test':
+        test_dataset = ZOD(task='test', **zod_cfg)
+        print(f"Test with {len(test_dataset)} samples.")
+        return test_dataset
 
-        else:
-            raise ValueError(f"Unknown split '{split}' for dataset 'zod'.")
+    else:
+        raise ValueError(f"Unknown split '{split}' for dataset 'zod'.")
 
 if __name__ == '__main__':
     cfg = {

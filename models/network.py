@@ -7,9 +7,66 @@ from .efficientnet_pytorch.model import EfficientNet
 from .utils.torch_geometry import get_perspective_transform
 from .LIDAR_BEV.LIDAR_BEV_backbone import LidarBEVBackbone
 # import torchgeometry as tgm
+import csv
+import os
 
 
 autocast = torch.cuda.amp.autocast
+
+# def log_feat_csv(img_feature, lidar_feature):
+#     filepath = "metrics/feature_visualization/feat.csv"
+#     # Check if file already exists
+#     file_exists = os.path.isfile(filepath)    
+#     with open(filepath, mode="a", newline="") as f:
+#         writer = csv.writer(f)
+
+#         # Write header if new file
+#         if not file_exists:
+#             writer.writerow(["image_feature", "lidar_feature"])
+
+#         # Append data row
+#         writer.writerow([img_feature, lidar_feature])
+
+import os
+import torch
+
+def append_features_pth(pth_path, img_feature, lidar_feature):
+    """
+    Appends (img_feature, lidar_feature) to a .pth file as a list of dict entries.
+
+    img_feature / lidar_feature: torch.Tensor or numpy array
+    meta: optional dict (e.g., {"epoch":..., "i_batch":..., "sample_id":...})
+    flush_every: if you call this in a loop, set >1 to reduce disk I/O (you'd buffer yourself).
+    """
+    os.makedirs(os.path.dirname(pth_path), exist_ok=True)
+
+    # Make tensors CPU + detached (safe for serialization)
+    if not torch.is_tensor(img_feature):
+        img_feature = torch.as_tensor(img_feature)
+    if not torch.is_tensor(lidar_feature):
+        lidar_feature = torch.as_tensor(lidar_feature)
+
+    entry = {
+        "image_feature": img_feature.detach().cpu(),
+        "lidar_feature": lidar_feature.detach().cpu(),
+    }
+
+    if os.path.isfile(pth_path):
+        data = torch.load(pth_path, map_location="cpu")
+        if isinstance(data, dict) and "entries" in data:
+            data["entries"].append(entry)
+        elif isinstance(data, list):
+            data.append(entry)
+            data = {"entries": data}
+        else:
+            # unknown format, start new container
+            data = {"entries": [entry]}
+    else:
+        data = {"entries": [entry]}
+
+    torch.save(data, pth_path)
+    return len(data["entries"])
+
 
 class HCNet(nn.Module):
     def __init__(self, args):
@@ -95,6 +152,19 @@ class HCNet(nn.Module):
         lidar_feat = torch.nn.functional.interpolate(
             lidar_feat, size=(Hs, Ws), mode='bilinear', align_corners=False
         )
+        
+        
+        ################################################################################
+        pth_path = "metrics/feature_visualization/features.pth"
+
+        # suppose these come from your model
+        # img_feature: (C,H,W) or (C,) tensor
+        # lidar_feature: (C,H,W) or (C,) tensor
+        n = append_features_pth(
+            pth_path,
+            img_feature=sat_feat,
+            lidar_feature=lidar_feat)
+        ################################################################################
         
         fmap1 = lidar_feat.float()  # "ground" branch
         fmap2 = sat_feat.float()    # "satellite" branch

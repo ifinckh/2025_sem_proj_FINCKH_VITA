@@ -24,7 +24,8 @@ import evaluate
 import dataset.ZOD as datasets
 from models.utils.utils import *
 from models.utils.loss_factory import *
-from myevaluate import evaluate_HCNet
+# from myevaluate import evaluate_HCNet
+from myevaluate_zod import evaluate_hcnet_zod
 
 # from torch.utils.tensorboard import SummaryWriter
 import warnings
@@ -59,7 +60,7 @@ def zod_collate_fn(batch):
 import csv
 import os
 
-def log_metrics_csv(filepath, epoch, iteration, loss, rte):
+def log_metrics_csv(filepath, epoch, iteration, loss, loss_h, loss_c, trans_l2_m, yaw_err_deg):
     """
     Append training metrics to a CSV file.
 
@@ -68,7 +69,10 @@ def log_metrics_csv(filepath, epoch, iteration, loss, rte):
         epoch (int): Current epoch.
         iteration (int): Iteration number within the epoch.
         loss (float): Training loss.
-        rte (float): RTE metric (or any other metric you'd like to track).
+        loss_h (float): Hierarchical loss component.
+        loss_c (float): Correspondence loss component.
+        rte_trans_l2_m (float): RTE translation L2 metric.
+        rte_yaw_err_deg (float): RTE yaw error in degrees.
     """
 
     # Check if file already exists
@@ -78,11 +82,10 @@ def log_metrics_csv(filepath, epoch, iteration, loss, rte):
 
         # Write header if new file
         if not file_exists:
-            writer.writerow(["epoch", "batch", "loss", "rte"])
+            writer.writerow(["epoch", "batch", "loss", "loss_h", "loss_c", "trans_l2_m", "yaw_err_deg"])
 
         # Append data row
-        writer.writerow([epoch, iteration, loss, rte])
-
+        writer.writerow([epoch, iteration, loss, loss_h, loss_c, trans_l2_m, yaw_err_deg])
 
 def count_parameters(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -136,6 +139,15 @@ def train(args):
                 break
             test_num += 1
         test_metrics_file_path = file_path
+        # Find available model save path
+        pth_folder = "checkpoints/"
+        test_num = 0
+        while True:
+            file_path = os.path.join(pth_folder, f"{date_str}_best_checkpoint_zod_{test_num}.pth")
+            if not os.path.exists(file_path):
+                break
+            test_num += 1
+        checkpoint_path = file_path
 
     model = nn.DataParallel(HCNet(args), device_ids=args.gpuid)
     print("Parameter Count: %d" % count_parameters(model))
@@ -179,7 +191,7 @@ def train(args):
 
     # infoLoss = InfoNCELoss(temperature=args.temperature, sample = True)
     should_keep_training = True
-    # w1, w2, w3 = args.loss_w
+    w1, w2, w3 = args.loss_w
     while should_keep_training:
         model.train()
         for i_batch, data_blob in enumerate(train_loader):
@@ -213,23 +225,47 @@ def train(args):
             # loss = loss*w1 + loss2*w2     
             
             # ----- adapted from vigor_gps_loss using GPT -----
-            loss_h, metrics = zod_homo_loss(
-                four_pred, sat_img,
-                rot_gt=rot_gt, trans_gt=trans_gt,
-                resolution=resolution,
-                gamma=args.gamma
-            )
-            loss = loss_h    # for now, no corr_loss   
+            # loss_h, metrics = zod_homo_loss(
+            #     four_pred, sat_img,
+            #     rot_gt=rot_gt, trans_gt=trans_gt,
+            #     resolution=resolution,
+            #     gamma=args.gamma
+            # )
+            # loss = loss_h    # for now, no corr_loss   
             
-            loss_RTE, supervision_zod_RTE = zod_se2_loss(
+            _, supervision_zod_RTE = zod_se2_loss(
                 four_pred, sat_img,
                 rot_gt=rot_gt,
                 trans_gt=trans_gt,
                 resolution=resolution,
                 gamma=args.gamma,
             )
-
             
+            infoLoss = InfoNCELoss(temperature=args.temperature)
+
+            loss_h, metrics = zod_homo_loss_original_style(
+                four_pred, sat_img,
+                rot_gt=rot_gt,
+                trans_gt=trans_gt,
+                resolution=resolution,
+                sat_size=args.sat_size,
+                gamma=args.gamma,
+                orien=True,
+                w_ori=w3,
+            )
+
+            # corr_fn: depends on your model; you might need corr_fn.corr_pyramid[0]
+            corr_tensor = corr_fn.corr_pyramid[0] if hasattr(corr_fn, "corr_pyramid") else corr_fn
+            loss_c = corr_loss_zod(
+                corr_tensor, infoLoss,
+                rot_gt=rot_gt,
+                trans_gt=trans_gt,
+                resolution=resolution,
+                sat_size=args.sat_size
+            )
+
+            loss = loss_h * w1 + loss_c * w2
+
 
             # Backward and Optimze
             scaler.scale(loss).backward()
@@ -265,7 +301,7 @@ def train(args):
             #     f'GT: ({gt[0]:.2f}, {gt[1]:.2f})'
             # )
             
-            log_metrics_csv(train_metrics_file_path,epoch, i_batch, loss.cpu().item(), loss_RTE.cpu().item())
+            log_metrics_csv(train_metrics_file_path,epoch, i_batch, loss.cpu().item(), loss_h.cpu().item(), loss_c.cpu().item(), supervision_zod_RTE["trans_l2_m"], supervision_zod_RTE["yaw_err_deg"])
             ############################################################################################
 
             # if total_steps %  args.IMG_FREQ == args.IMG_FREQ-1:
@@ -312,7 +348,8 @@ def train(args):
                 'lr_schedule':scheduler.state_dict()
             }
             best_model_dict = model.state_dict()
-            PATH = 'checkpoints/best_checkpoint_{}.pth'.format(args.name)
+            # PATH = 'checkpoints/best_checkpoint_{}.pth'.format(args.name)
+            PATH = checkpoint_path
             torch.save(checkpoint, PATH)
             print('\033[1;94m'+"Save the best of {}, at {}\033[0m".format(val_mdis, PATH))
         else:
@@ -333,8 +370,8 @@ def train(args):
     model  = model.module
     model.eval()
     
-    # val_dataset = datasets.fetch_dataloader(args, split="validation")
-    # evaluate_HCNet(model, val_dataset, args=args)    
+    val_dataset = datasets.fetch_dataloader(args, split="val")
+    evaluate_hcnet_zod(model, val_dataset, args=args)    
 
     return PATH
 

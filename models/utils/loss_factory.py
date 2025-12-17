@@ -443,3 +443,149 @@ def zod_se2_loss(four_pred, sat_img, rot_gt, trans_gt, resolution, gamma=0.85):
     }
 
     return total_loss, metrics
+
+
+
+def se2_to_gt_pixel(rot_gt, trans_gt, resolution, sat_size):
+    """
+    rot_gt: (B,3,3)
+    trans_gt: (B,3) meters
+    resolution: (B,) meters/pixel
+    sat_size: int (square patch)
+    Returns:
+      y: (B,2) target pixel coords in [0,sat_size) where center should land
+    """
+    B = trans_gt.shape[0]
+    device = trans_gt.device
+
+    cx = (sat_size - 1) / 2.0
+    cy = (sat_size - 1) / 2.0
+
+    res = resolution.view(B, 1)
+    dx = trans_gt[:, 0].view(B, 1)
+    dy = trans_gt[:, 1].view(B, 1)
+
+    # if your GT is already expressed as the shift of center, this is enough:
+    x_gt = dx / res + cx
+    y_gt = cy - dy / res  # minus because image y points down
+
+    return torch.cat([x_gt, y_gt], dim=1)
+
+
+def corr_loss_zod(corr_fn, infoLoss, rot_gt, trans_gt, resolution, sat_size,
+                  transformed_center=None, sz=(512,512)):
+    """
+    corr_fn: either corr_fn.corr_pyramid[0] OR the raw corr tensor from model (depends on your implementation)
+            The original code reshapes corr_fn into (B,h,w,h,w).
+    transformed_center: optional (B,2,1) pixel coords in input image space used to pick a different query location.
+    sz: size of the input image that corr was built from (H,W). Used only if transformed_center is used.
+    """
+    # corr tensor expected last two dims are (h,w)
+    corr = corr_fn
+    B = corr.shape[0]
+    h, w = corr.shape[-2:]
+
+    if transformed_center is not None:
+        # (B,h,w,h,w) -> permute to query by transformed_center
+        corr_map = corr.view(B, h, w, h, w).permute(0, 3, 4, 1, 2).contiguous().view(B, h*w, h, w)
+        tc = transformed_center[:, :, 0] * h / sz[0]     # scale to corr grid (matches original)
+        tc = 2.0 * tc / (w - 1) - 1.0
+        corr_map = F.grid_sample(corr_map, tc.view(B,1,1,2), align_corners=True).view(B, h, w)
+    else:
+        # take correlation from the center query (h//2,w//2)
+        corr_map = corr.view(B, h, w, h, w)[:, h//2, w//2, :, :]  # (B,h,w)
+
+    # GT pixel in sat image (0..sat_size)
+    y_pix = se2_to_gt_pixel(rot_gt, trans_gt, resolution, sat_size)  # (B,2)
+
+    # map GT pixel to corr grid coords
+    pos = y_pix / sat_size * (w - 1)  # (B,2) in [0,w-1]
+    return infoLoss(corr_map, pos)
+
+
+def zod_homo_loss_original_style(
+    four_pred, sat_img,
+    rot_gt, trans_gt, resolution,
+    sat_size,
+    gamma=0.85,
+    orien=True,
+    w_ori=10.0
+):
+    """
+    four_pred: list of (B,2,2,2)
+    sat_img: (B,3,H,W) used only for sz/H/W; H==W==sat_size typically
+    rot_gt/trans_gt/resolution: your SE2 labels
+    """
+    B, _, H, W = sat_img.shape
+    device = sat_img.device
+    sz = [B, 1, H, W]
+
+    preds = four_pred if isinstance(four_pred, list) else [four_pred]
+    n = len(preds)
+
+    # GT pixel (B,2)
+    y = se2_to_gt_pixel(rot_gt, trans_gt, resolution, sat_size).to(device)
+
+    v_loss = 0.0
+    last_x = None
+    last_ori = None
+    
+    cx = (W - 1) / 2.0
+    cy = (H - 1) / 2.0
+
+    for i, fp in enumerate(preds):
+        w_i = gamma ** (n - i - 1)
+
+        Hmat = get_homograpy(fp, sz)  # (B,3,3)
+
+        # points: center and a point "up" from center (like original)
+        p0 = torch.tensor([[[cx],[cy],[1.0]]], device=device).repeat(B,1,1)           # (B,3,1)
+        p1 = torch.tensor([[[cx],[cy-10.0],[1.0]]], device=device).repeat(B,1,1)      # (B,3,1)
+        pts = torch.cat([p0, p1], dim=2)                                              # (B,3,2)
+
+        x = Hmat.bmm(pts)
+        x = x / x[:, 2:3, :]             # normalize
+        x2 = x[:, 0:2, :]                # (B,2,2)
+
+        # orientation loss (same geometry as original vigor_gps_loss)
+        if orien:
+            dx = x2[:, 0, 1] - x2[:, 0, 0]
+            dy = x2[:, 1, 0] - x2[:, 1, 1]
+            ori_pred = -torch.rad2deg(torch.atan2(dx, dy))  # (B,)
+            # GT yaw from rot_gt
+            ori_gt = torch.rad2deg(torch.atan2(rot_gt[:, 1, 0], rot_gt[:, 0, 0]))
+            ori_err = (ori_pred - ori_gt + 180.0) % 360.0 - 180.0
+            ori_loss = ori_err.abs().nanmean()
+        else:
+            ori_pred = None
+            ori_loss = 0.0
+
+        # predicted center pixel
+        x_center = x2[:, :, 0]  # (B,2)
+
+        # pixel MSE (scaled similar to original; original has extra factors, but MSE is the core)
+        i_loss = torch.nanmean((x_center - y) ** 2)
+
+        v_loss += w_i * (i_loss + w_ori * ori_loss)
+
+        last_x = x_center
+        last_ori = ori_pred
+
+
+    # metrics
+    err_pix = (last_x - y).detach()
+    pix_l2 = (err_pix**2).sum(dim=1).sqrt()
+    res = resolution.view(B,1).to(device)
+    err_m = err_pix * res
+    m_l2 = (err_m**2).sum(dim=1).sqrt()
+
+    metrics = {
+        "pix_l2": float(pix_l2.nanmean().item()),
+        "m_l2": float(m_l2.nanmean().item()),
+        "pred_dx_m": float((err_m[:,0] + trans_gt[:,0].detach()).mean().item()) if err_m.numel() else 0.0,
+        "pred_dy_m": float((err_m[:,1] + trans_gt[:,1].detach()).mean().item()) if err_m.numel() else 0.0,
+    }
+    if orien and last_ori is not None:
+        metrics["yaw_err_deg"] = float(((last_ori - torch.rad2deg(torch.atan2(rot_gt[:,1,0], rot_gt[:,0,0])) + 180)%360 - 180).abs().mean().item())
+
+    return v_loss, metrics

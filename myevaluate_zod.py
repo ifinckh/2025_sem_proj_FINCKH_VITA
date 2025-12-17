@@ -1,6 +1,7 @@
 import os, time, argparse, warnings
 warnings.filterwarnings("ignore")
 
+from models.utils.loss_factory import zod_se2_loss
 import numpy as np
 import torch
 import torch.nn as nn
@@ -37,11 +38,14 @@ def evaluate_hcnet_zod(model, val_loader, args):
         batch = to_device(batch, device)
 
         # Inputs (names aligned with your dataset/collate)
-        sat_img = batch.get("image") if "image" in batch else batch["image_rgb"]     # (B,3,H,W)
-        bev     = batch["BEV_lidar"]                                                 # (B,C,Hb,Wb)
-        rot_gt  = batch["rotation"]                                                  # (B,3,3)
-        trans_gt= batch["translation"]                                               # (B,3)
-        res     = batch["resolution"]                                                # (B,)
+        sat_img = batch.get("image")        # (B,3,H,W)
+        bev     = batch["BEV_lidar"]        # (B,C,Hb,Wb)
+        rot_gt  = batch["rotation"]         # (B,3,3)
+        trans_gt= batch["translation"]      # (B,3)
+        resolution     = batch["resolution"]       # (B,)
+        points   = batch["points"]          # (B,N,3)
+        # intensity= batch["intensity"]       # (B,N)
+        heading  = batch["heading"]         # (B,)
 
         B, _, H, W = sat_img.shape
         sz = [B, 1, H, W]
@@ -51,54 +55,36 @@ def evaluate_hcnet_zod(model, val_loader, args):
         four_pred, corr_fn = model(bev, sat_img, sat_gps=None, iters_lev0=args.iters_lev0)
         t1 = time.time()
         t_list.append(t1 - t0)
-
-        # Homography from four corners (last iteration)
-        four_last = four_pred[-1] if isinstance(four_pred, list) else four_pred
-        H_mat = get_homograpy(four_last, sz)  # (B,3,3)
-
-        # Predict pixel of image center
-        cx = (W - 1) / 2.0
-        cy = (H - 1) / 2.0
-        pts = torch.tensor([[[cx],[cy],[1.0]]], dtype=torch.float32, device=device).repeat(B,1,1)  # (B,3,1)
-        x = H_mat.bmm(pts)
-        x = x / x[:, 2:3, :]
-        x_pred = x[:, 0:2, 0]  # (B,2), pixels
-
-        # Ground-truth pixel of center from (rot_gt, trans_gt, res)
-        res_ = res.view(B,1)
-        cos_t = rot_gt[:, 0, 0].view(B,1)
-        sin_t = rot_gt[:, 1, 0].view(B,1)
-        dx = trans_gt[:, 0].view(B,1)
-        dy = trans_gt[:, 1].view(B,1)
-
-        x0_m = torch.zeros(B,1, device=device)
-        y0_m = torch.zeros(B,1, device=device)
-        x1_m = cos_t * x0_m - sin_t * y0_m + dx
-        y1_m = sin_t * x0_m + cos_t * y0_m + dy
-
-        x_gt_pix = x1_m / res_ + cx
-        y_gt_pix = y1_m / res_ + cy
-        x_gt = torch.cat([x_gt_pix, y_gt_pix], dim=1)  # (B,2)
-
-        # Errors
-        err_pix = x_pred - x_gt                       # (B,2)
-        err_m   = err_pix * res_                      # (B,2)
-        pix_l2.extend(((err_pix**2).sum(1).sqrt()).tolist())
-        meters_l2.extend(((err_m**2).sum(1).sqrt()).tolist())
-        abs_dx_m.extend(err_m[:,0].abs().tolist())
-        abs_dy_m.extend(err_m[:,1].abs().tolist())
-
-        # Yaw from homography (center vs 10 px above)
-        pts2 = torch.tensor([[[cx],[cy-10.0],[1.0]]], dtype=torch.float32, device=device).repeat(B,1,1)
-        x2 = H_mat.bmm(pts2); x2 = x2 / x2[:, 2:3, :]
-        p0 = x_pred
-        p1 = x2[:, 0:2, 0]
-        v  = p1 - p0  # image "up" direction after warp
-        yaw_pred = torch.rad2deg(torch.atan2(v[:,0], -v[:,1]))  # (B,)
-        yaw_gt   = torch.rad2deg(torch.atan2(sin_t.squeeze(1), cos_t.squeeze(1)))
-        yaw_err  = ((yaw_pred - yaw_gt + 180.0) % 360.0) - 180.0
-        yaw_err_deg.extend(yaw_err.abs().tolist())
-
+        
+        
+        loss_RTE, supervision_zod_RTE = zod_se2_loss(
+                        four_pred, sat_img,
+                        rot_gt=rot_gt,
+                        trans_gt=trans_gt,
+                        resolution=resolution,
+                        gamma=args.gamma,
+                    )
+        
+        
+        pred_dx_m = supervision_zod_RTE["pred_dx_m"]
+        pred_dy_m = supervision_zod_RTE["pred_dy_m"]
+        gt_dx_m = supervision_zod_RTE["gt_dx_m"]
+        gt_dy_m = supervision_zod_RTE["gt_dy_m"]
+        pred_yaw_deg = supervision_zod_RTE["pred_yaw_deg"]
+        gt_yaw_deg = supervision_zod_RTE["gt_yaw_deg"]
+        
+        # Compute metrics
+        dx_m = pred_dx_m - gt_dx_m
+        dy_m = pred_dy_m - gt_dy_m
+        dyaw_deg = pred_yaw_deg - gt_yaw_deg
+        # Mean location error in meters        
+        l2_m = torch.sqrt(dx_m**2 + dy_m**2)
+        meters_l2.extend(l2_m.cpu().numpy().tolist())
+        # orientation estimation error in degrees
+        yaw_err_deg.extend(torch.abs(dyaw_deg).cpu().numpy().tolist())
+        
+        
+        
         # Optional probability at GT (if corr_fn present)
         if hasattr(model, "corr_fn") or corr_fn is not None:
             cf = corr_fn if corr_fn is not None else model.corr_fn
@@ -114,7 +100,7 @@ def evaluate_hcnet_zod(model, val_loader, args):
             sm = sm.view(B, 1, h, w)
 
             # Normalize GT pixel to [-1,1] grid at corr resolution
-            gt_grid = (x_gt / W) * (w - 1)  # scale to [0,w-1]
+            gt_grid = (gt_dx_m / W) * (w - 1)  # scale to [0,w-1]
             gt_norm = 2 * gt_grid / (w - 1) - 1
             grid = gt_norm.view(B,1,1,2)    # (B,1,1,2) as (x,y)
 
