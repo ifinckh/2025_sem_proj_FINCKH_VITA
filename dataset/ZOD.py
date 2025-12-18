@@ -110,7 +110,7 @@ class ZOD(torch.utils.data.Dataset):
         
         ####### For debugging, use only subset of training drives ########
         # task_data_subset = ["000009","000007"] 
-        task_data_subset = task_data_subset[3:5]
+        # task_data_subset = task_data_subset[3:5]
         
         bad_samples = pd.read_csv("dataset/dataset_utils/bad_ids.csv")
 

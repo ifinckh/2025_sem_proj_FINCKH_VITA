@@ -1,14 +1,14 @@
 import os, time, argparse, warnings
 warnings.filterwarnings("ignore")
 
-from models.utils.loss_factory import zod_se2_loss
+from models.utils.loss_factory import *
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
 from models.network import HCNet
-from models.utils.utils import get_homograpy
+# from models.utils.utils import get_homograpy
 import dataset as datasets  # your fetch_dataloader
 from collections import defaultdict
 
@@ -27,10 +27,11 @@ def evaluate_hcnet_zod(model, val_loader, args):
     device = next(model.parameters()).device
 
     meters_l2, pix_l2 = [], []
-    abs_dx_m, abs_dy_m, yaw_err_deg = [], [], []
+    yaw_err_deg = []
     prob_at_gt = []
 
     t_list = []
+    _, _, w3 = args.loss_w
 
     for i, batch in enumerate(val_loader):
         if batch is None:
@@ -43,9 +44,9 @@ def evaluate_hcnet_zod(model, val_loader, args):
         rot_gt  = batch["rotation"]         # (B,3,3)
         trans_gt= batch["translation"]      # (B,3)
         resolution     = batch["resolution"]       # (B,)
-        points   = batch["points"]          # (B,N,3)
+        # points   = batch["points"]          # (B,N,3)
         # intensity= batch["intensity"]       # (B,N)
-        heading  = batch["heading"]         # (B,)
+        # heading  = batch["heading"]         # (B,)
 
         B, _, H, W = sat_img.shape
         sz = [B, 1, H, W]
@@ -57,21 +58,15 @@ def evaluate_hcnet_zod(model, val_loader, args):
         t_list.append(t1 - t0)
         
         
-        loss_RTE, supervision_zod_RTE = zod_se2_loss(
-                        four_pred, sat_img,
-                        rot_gt=rot_gt,
-                        trans_gt=trans_gt,
-                        resolution=resolution,
-                        gamma=args.gamma,
-                    )
+        loss, metric, _ = zod_homography_loss(four_pred, sat_img, rot_gt, trans_gt, resolution, w3=w3, orien=True, gamma=args.gamma)
+
         
-        
-        pred_dx_m = supervision_zod_RTE["pred_dx_m"]
-        pred_dy_m = supervision_zod_RTE["pred_dy_m"]
-        gt_dx_m = supervision_zod_RTE["gt_dx_m"]
-        gt_dy_m = supervision_zod_RTE["gt_dy_m"]
-        pred_yaw_deg = supervision_zod_RTE["pred_yaw_deg"]
-        gt_yaw_deg = supervision_zod_RTE["gt_yaw_deg"]
+        pred_dx_m = metric["pred_dx_m"]
+        pred_dy_m = metric["pred_dy_m"]
+        gt_dx_m = metric["gt_dx_m"]
+        gt_dy_m = metric["gt_dy_m"]
+        pred_yaw_deg = metric["pred_yaw_deg"]
+        gt_yaw_deg = metric["gt_yaw_deg"]
         
         # Compute metrics
         dx_m = pred_dx_m - gt_dx_m
@@ -108,18 +103,14 @@ def evaluate_hcnet_zod(model, val_loader, args):
             prob_at_gt.extend(prob.view(B).tolist())
 
         if (i+1) % args.log_every == 0:
-            print(f"[{i+1}] pix_l2={np.mean(pix_l2):.2f}, m_l2={np.mean(meters_l2):.3f}, "
-                  f"|dx|={np.mean(abs_dx_m):.3f}m, |dy|={np.mean(abs_dy_m):.3f}m, "
+            print(f"[{i+1}] m_l2={np.mean(meters_l2):.3f}, "
                   f"yaw_err={np.mean(yaw_err_deg):.2f}deg, "
                   f"prob@gt={np.mean(prob_at_gt):.4f}" if prob_at_gt else
-                  f"[{i+1}] pix_l2={np.mean(pix_l2):.2f}, m_l2={np.mean(meters_l2):.3f}, "
-                  f"|dx|={np.mean(abs_dx_m):.3f}m, |dy|={np.mean(abs_dy_m):.3f}m, "
+                  f"[{i+1}] m_l2={np.mean(meters_l2):.3f}, "
                   f"yaw_err={np.mean(yaw_err_deg):.2f}deg")
 
     print("==== ZOD evaluation (HC‑Net homography) ====")
-    print(f"Avg pix L2: {np.mean(pix_l2):.2f}")
     print(f"Avg meter L2: {np.mean(meters_l2):.3f}")
-    print(f"Avg |dx|: {np.mean(abs_dx_m):.3f} m, Avg |dy|: {np.mean(abs_dy_m):.3f} m")
     print(f"Avg yaw err: {np.mean(yaw_err_deg):.2f} deg")
     if len(prob_at_gt) > 0:
         print(f"Avg prob@GT: {np.mean(prob_at_gt):.4f}")

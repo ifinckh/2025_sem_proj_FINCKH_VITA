@@ -214,8 +214,6 @@ def train(args):
             )
             
             # ---- Original HC Net loss -----
-            # sat_delta = sat_delta if args.orig_label else None
-
             # Forward pass   
             # four_pred, corr_fn  = model(image1, image2, sat_gps=sat_gps.float(), iters_lev0=args.iters_lev0)       
             # loss, metrics = vigor_gps_loss(four_pred, grd_gps = grd_gps, sat_gps=sat_gps, args=args, sat_delta = sat_delta, ori_angle = ori_angle, w3 = w3,\
@@ -226,7 +224,7 @@ def train(args):
             
             # ---- Adapted HC Net loss -----
 
-            loss1, metrics, y = zod_homo_loss_test(four_pred, sat_img, rot_gt, trans_gt, resolution, w3=w3, orien=True, gamma=args.gamma)
+            loss1, metrics, y = zod_homography_loss(four_pred, sat_img, rot_gt, trans_gt, resolution, w3=w3, orien=True, gamma=args.gamma)
             loss2 = corr_loss_zod(corr_fn, infoLoss, y, sz = [sat_img.shape[2],sat_img.shape[3]])
 
             loss = loss1*w1 + loss2*w2

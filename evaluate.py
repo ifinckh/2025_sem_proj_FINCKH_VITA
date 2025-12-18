@@ -7,8 +7,9 @@ import argparse
 import os
 import numpy as np
 import torch
-from models.utils.utils import get_homograpy   # already used elsewhere
-from models.utils.loss_factory import zod_homo_loss
+
+from models.utils.utils import *
+from models.utils.loss_factory import *
 import time
 import cv2
 
@@ -23,6 +24,8 @@ def validate_process(model, total_steps, val_loader, args):
     model.eval()
     losses = []
     times = []
+    
+    _, _, w3 = args.loss_w
 
     for i_batch, data_blob in enumerate(val_loader):
         t0 = time.time()
@@ -39,13 +42,8 @@ def validate_process(model, total_steps, val_loader, args):
                           iters_lev0=args.iters_lev0,
                           test_mode=True)
 
-        loss, _ = zod_homo_loss(
-            four_pred, sat_img,
-            rot_gt=rot_gt,
-            trans_gt=trans_gt,
-            resolution=resolution,
-            gamma=args.gamma
-        )
+        loss, _, _ = zod_homography_loss(four_pred, sat_img, rot_gt, trans_gt, resolution, w3=w3, orien=True, gamma=args.gamma)
+
         losses.append(loss.item())
 
         t1 = time.time()
@@ -80,7 +78,7 @@ def test_process(model, total_steps, args):
         num_workers=0,
         pin_memory=True,
     )
-
+    _, _, w3 = args.loss_w
     losses = []
 
     for i_batch, data_blob in enumerate(val_loader):
@@ -95,13 +93,8 @@ def test_process(model, total_steps, args):
                           iters_lev0=args.iters_lev0,
                           test_mode=True)
 
-        loss, _ = zod_homo_loss(
-            four_pred, sat_img,
-            rot_gt=rot_gt,
-            trans_gt=trans_gt,
-            resolution=resolution,
-            gamma=args.gamma
-        )
+        loss, _, _ = zod_homography_loss(four_pred, sat_img, rot_gt, trans_gt, resolution, w3=w3, orien=True, gamma=args.gamma)
+        
         losses.append(loss.item())
 
         # optional: visualize the first example

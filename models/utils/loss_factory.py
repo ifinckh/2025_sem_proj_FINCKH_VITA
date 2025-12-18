@@ -41,7 +41,7 @@ def corr_loss_zod(corr_fn, infoLoss, y_pix, sz= [512,512]):
     pos = y_pix / sz[0] * (w - 1)  # (B,2) in [0,w-1]
     return infoLoss(corr_map, pos)
 
-def zod_homo_loss_test(four_pred, sat_img, rot_gt, trans_gt, resolution, orien=True, gamma=0.85, w3=10.0):
+def zod_homography_loss(four_pred, sat_img, rot_gt, trans_gt, resolution, orien=True, gamma=0.85, w3=10.0):
     B, _, H, W = sat_img.shape
     device = sat_img.device
     sz = [B, 1, H, W]
@@ -124,7 +124,7 @@ def zod_homo_loss_test(four_pred, sat_img, rot_gt, trans_gt, resolution, orien=T
 
         # Original vigor_gps_loss style scaling
         i_loss = torch.nanmean((x-y)**2)
-        i_loss += ori_loss * w3 if orien else 0
+        i_loss += ori_loss * w3
         v_loss += weight * i_loss
         
         # remember last prediction for metrics
