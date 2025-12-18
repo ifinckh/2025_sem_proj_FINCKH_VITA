@@ -189,7 +189,7 @@ def train(args):
     epoch = args.start_step//len(train_loader)
     num_epochs = args.num_steps//len(train_loader)
 
-    # infoLoss = InfoNCELoss(temperature=args.temperature, sample = True)
+    infoLoss = InfoNCELoss(temperature=args.temperature, sample = True)
     should_keep_training = True
     w1, w2, w3 = args.loss_w
     while should_keep_training:
@@ -224,47 +224,12 @@ def train(args):
             
             # loss = loss*w1 + loss2*w2     
             
-            # ----- adapted from vigor_gps_loss using GPT -----
-            # loss_h, metrics = zod_homo_loss(
-            #     four_pred, sat_img,
-            #     rot_gt=rot_gt, trans_gt=trans_gt,
-            #     resolution=resolution,
-            #     gamma=args.gamma
-            # )
-            # loss = loss_h    # for now, no corr_loss   
-            
-            _, supervision_zod_RTE = zod_se2_loss(
-                four_pred, sat_img,
-                rot_gt=rot_gt,
-                trans_gt=trans_gt,
-                resolution=resolution,
-                gamma=args.gamma,
-            )
-            
-            infoLoss = InfoNCELoss(temperature=args.temperature)
+            # ---- Adapted HC Net loss -----
 
-            loss_h, metrics = zod_homo_loss_original_style(
-                four_pred, sat_img,
-                rot_gt=rot_gt,
-                trans_gt=trans_gt,
-                resolution=resolution,
-                sat_size=args.sat_size,
-                gamma=args.gamma,
-                orien=True,
-                w_ori=w3,
-            )
+            loss1, metrics, y = zod_homo_loss_test(four_pred, sat_img, rot_gt, trans_gt, resolution, w3=w3, orien=True, gamma=args.gamma)
+            loss2 = corr_loss_zod(corr_fn, infoLoss, y, sz = [sat_img.shape[2],sat_img.shape[3]])
 
-            # corr_fn: depends on your model; you might need corr_fn.corr_pyramid[0]
-            corr_tensor = corr_fn.corr_pyramid[0] if hasattr(corr_fn, "corr_pyramid") else corr_fn
-            loss_c = corr_loss_zod(
-                corr_tensor, infoLoss,
-                rot_gt=rot_gt,
-                trans_gt=trans_gt,
-                resolution=resolution,
-                sat_size=args.sat_size
-            )
-
-            loss = loss_h * w1 + loss_c * w2
+            loss = loss1*w1 + loss2*w2
 
 
             # Backward and Optimze
@@ -285,23 +250,22 @@ def train(args):
             else:
                 print("skip the scheduler step")
 
-            metrics.update({'loss': loss.cpu().item()})
-            logger.push(metrics)
+            # metrics.update({'loss': loss.cpu().item()})
+            # logger.push(metrics)
             
             ############################################################################################
             # print('\033[1;94m'+'Epoch: [{}/{}], Loss: {}, RTE: {}, Pred dx,dy: {}, GT {}. \033[0m'
             #       .format(epoch+1, num_epochs, loss.cpu().item(), loss_RTE.cpu().item(), 
             #               (supervision_zod_RTE["pred_dx_m"],supervision_zod_RTE["pred_dy_m"]),trans_gt[:,0:2][0].cpu().numpy()))
-            # gt = trans_gt[:,0:2][0].cpu().numpy()
             
-            # print(
-            #     f'Epoch: [{epoch+1}/{num_epochs}], Loss: {loss.cpu().item():.1f}, '
-            #     f'RTE: {loss_RTE.cpu().item():.2f}, '
-            #     f'Pred (dx,dy): ({supervision_zod_RTE["pred_dx_m"]:.2f}, {supervision_zod_RTE["pred_dy_m"]:.2f}), '
-            #     f'GT: ({gt[0]:.2f}, {gt[1]:.2f})'
-            # )
-            
-            log_metrics_csv(train_metrics_file_path,epoch, i_batch, loss.cpu().item(), loss_h.cpu().item(), loss_c.cpu().item(), supervision_zod_RTE["trans_l2_m"], supervision_zod_RTE["yaw_err_deg"])
+            if i_batch % 10 == 0:
+                print(
+                    f'Epoch: [{epoch+1}/{num_epochs}], Batch: {i_batch}/{len(train_loader)}, '
+                    f'Loss: {loss.cpu().item():.3f}, '
+                    f'Trans_L2_m: {metrics["trans_l2_m"]:.3f}, '
+                    f'Yaw_err_deg: {metrics["yaw_err_deg"]:.3f}'
+                )
+            log_metrics_csv(train_metrics_file_path,epoch, i_batch, loss.cpu().item(), loss1.cpu().item(), loss2.cpu().item(), metrics["trans_l2_m"], metrics["yaw_err_deg"])
             ############################################################################################
 
             # if total_steps %  args.IMG_FREQ == args.IMG_FREQ-1:

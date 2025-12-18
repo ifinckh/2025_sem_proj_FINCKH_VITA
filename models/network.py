@@ -30,7 +30,7 @@ autocast = torch.cuda.amp.autocast
 import os
 import torch
 
-def append_features_pth(pth_path, img_feature, lidar_feature):
+def append_features_pth(pth_path, img_feature, lidar_feature, correlation=None):
     """
     Appends (img_feature, lidar_feature) to a .pth file as a list of dict entries.
 
@@ -49,6 +49,7 @@ def append_features_pth(pth_path, img_feature, lidar_feature):
     entry = {
         "image_feature": img_feature.detach().cpu(),
         "lidar_feature": lidar_feature.detach().cpu(),
+        "correlation": [x.detach().cpu() for x in correlation] if correlation is not None else None
     }
 
     if os.path.isfile(pth_path):
@@ -154,18 +155,6 @@ class HCNet(nn.Module):
         )
         
         
-        ################################################################################
-        pth_path = "metrics/feature_visualization/features.pth"
-
-        # suppose these come from your model
-        # img_feature: (C,H,W) or (C,) tensor
-        # lidar_feature: (C,H,W) or (C,) tensor
-        n = append_features_pth(
-            pth_path,
-            img_feature=sat_feat,
-            lidar_feature=lidar_feat)
-        ################################################################################
-        
         fmap1 = lidar_feat.float()  # "ground" branch
         fmap2 = sat_feat.float()    # "satellite" branch
         sz = fmap1.shape  # (B, corr_dim, Hc, Wc)
@@ -178,6 +167,19 @@ class HCNet(nn.Module):
         coords0, coords1 = self.initialize_flow_k(sat_img, k=k_factor)
 
         four_point_disp = torch.zeros((sz[0], 2, 2, 2), device=fmap1.device)
+        
+        # ################################################################################
+        # pth_path = "metrics/feature_visualization/features.pth"
+
+        # # suppose these come from your model
+        # # img_feature: (C,H,W) or (C,) tensor
+        # # lidar_feature: (C,H,W) or (C,) tensor
+        # n = append_features_pth(
+        #     pth_path,
+        #     img_feature=sat_feat,
+        #     lidar_feature=lidar_feat,
+        #     correlation = corr_fn.corr_pyramid )
+        # ################################################################################
 
 
         # 3. Recurrent Homography Estimation

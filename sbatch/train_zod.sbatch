@@ -18,6 +18,6 @@ source ~/.bashrc
 conda activate dg
 
 # Run training
-python -u train.py --config /home/finckh/VITA/HC-Net/models/config/ZOD/train.json  --name zod # --batch_size 16
+python -u train.py --config /home/finckh/VITA/HC-Net/models/config/ZOD/train.json  --name zod_train # --batch_size 16
 
 conda deactivate

@@ -13,7 +13,7 @@
 
     "batch_size": 5,
     "lr": 0.00035,
-    "num_steps": 190252,
+    "num_steps": 39000,
     "scheduler": "OneCycle",
     "loss_w": [0.1, 1.0, 10.0],
     "temperature": 4.0,
@@ -35,7 +35,6 @@
 
 
     "image_size": 512,
-    "sat_size": 512,
     "zoom": 20,
 
     "IMG_FREQ": 20000,
