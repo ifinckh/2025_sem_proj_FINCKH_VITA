@@ -39,14 +39,14 @@ def evaluate_hcnet_zod(model, val_loader, args):
         batch = to_device(batch, device)
 
         # Inputs (names aligned with your dataset/collate)
-        sat_img = batch.get("image")        # (B,3,H,W)
-        bev     = batch["BEV_lidar"]        # (B,C,Hb,Wb)
-        rot_gt  = batch["rotation"]         # (B,3,3)
-        trans_gt= batch["translation"]      # (B,3)
-        resolution     = batch["resolution"]       # (B,)
-        # points   = batch["points"]          # (B,N,3)
-        # intensity= batch["intensity"]       # (B,N)
-        # heading  = batch["heading"]         # (B,)
+        sat_img = batch["image"]                # (B,3,H,W)
+        bev     = batch["bev_lidar"]            # (B,C,Hb,Wb)
+        rot_gt  = batch["rotation"]             # (B,3,3)
+        trans_gt= batch["translation"]          # (B,3)
+        resolution     = batch["resolution"]    # (B,)
+        # points   = batch["points"]              # (B,N,3)
+        # intensity= batch["intensity"]           # (B,N)
+        # heading  = batch["heading"]             # (B,)
 
         B, _, H, W = sat_img.shape
         sz = [B, 1, H, W]

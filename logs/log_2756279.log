@@ -1,0 +1,112 @@
+{'gpuid': [0], 'mixed_precision': False, 'iters_lev0': 6, 'lev0': True, 'flow': True, 'p_siamese': True, 'CNN16': True, 'dataset': 'zod', 'orig_label': False, 'cross_area': False, 'batch_size': 5, 'lr': 0.00035, 'num_steps': 39000, 'scheduler': 'OneCycle', 'loss_w': [0.1, 1.0, 100000.0], 'temperature': 4.0, 'augment': False, 'ori_noise': 45.0, 'orien': True, 'restore_ckpt': None, 'model': None, 'wdecay': 0.0005, 'epsilon': 1e-07, 'clip': 1.0, 'gamma': 0.85, 'name': 'zod_train', 'validation': None, 'image_size': 512, 'zoom': 20, 'IMG_FREQ': 20000, 'SUM_FREQ': 100, 'use_augmentation': True, 'image_area_dg_m': 51.2, 'image_area_zod_m': 100, 'max_translation': 15.0, 'max_rot_deg': 20.0, 'z_range': [-2.5, 3.0], 'BEV_grid_resolution': 0.1, 'lidar_dataset_root': '/work/vita/datasets/zod', 'aerial_img_dataset_root': '/work/vita/datasets/zod_crossview_processed_100m', 'version': 'full', 'config': '/home/finckh/VITA/HC-Net/models/config/ZOD/train.json', 'best_dis': 100000000.0, 'start_step': 0}
+[31m2025-12-20 22:42:10[0m
+Loaded pretrained weights for efficientnet-b0
+Parameter Count: 7754186
+Loading train split : 23 drives
+Loading val split : 6 drives
+Training with 47407 samples, validation with 10393 samples.
+Using 5 dataloader workers every process
+Best distance so far 100000000.0.
+[34mLog will be saved to:./watch/zod/zod_train_20251220_224843.log[0m
+Epoch: [1/4], Batch: 0/9482, Loss: 4108.823, Trans_L2_m: 11.807, Yaw_err_deg: 9.750
+Epoch: [1/4], Batch: 10/9482, Loss: 3706.545, Trans_L2_m: 11.780, Yaw_err_deg: 5.932
+Epoch: [1/4], Batch: 20/9482, Loss: 3889.264, Trans_L2_m: 11.541, Yaw_err_deg: 9.543
+Epoch: [1/4], Batch: 30/9482, Loss: 5692.564, Trans_L2_m: 15.207, Yaw_err_deg: 7.167
+Epoch: [1/4], Batch: 40/9482, Loss: 3323.169, Trans_L2_m: 10.892, Yaw_err_deg: 9.584
+Epoch: [1/4], Batch: 50/9482, Loss: 3506.251, Trans_L2_m: 10.105, Yaw_err_deg: 10.988
+Epoch: [1/4], Batch: 60/9482, Loss: 2578.237, Trans_L2_m: 7.942, Yaw_err_deg: 12.297
+Epoch: [1/4], Batch: 70/9482, Loss: 4935.615, Trans_L2_m: 11.987, Yaw_err_deg: 11.466
+Epoch: [1/4], Batch: 80/9482, Loss: 4425.096, Trans_L2_m: 13.173, Yaw_err_deg: 8.011
+Epoch: [1/4], Batch: 90/9482, Loss: 2838.726, Trans_L2_m: 8.795, Yaw_err_deg: 12.213
+Epoch: [1/4], Batch: 100/9482, Loss: 4388.902, Trans_L2_m: 12.812, Yaw_err_deg: 8.694
+Epoch: [1/4], Batch: 110/9482, Loss: 4486.108, Trans_L2_m: 11.390, Yaw_err_deg: 12.532
+Epoch: [1/4], Batch: 120/9482, Loss: 2906.293, Trans_L2_m: 9.785, Yaw_err_deg: 8.098
+Epoch: [1/4], Batch: 130/9482, Loss: 4180.153, Trans_L2_m: 12.657, Yaw_err_deg: 7.013
+Epoch: [1/4], Batch: 140/9482, Loss: 3508.872, Trans_L2_m: 11.783, Yaw_err_deg: 6.968
+Epoch: [1/4], Batch: 150/9482, Loss: 3089.099, Trans_L2_m: 9.154, Yaw_err_deg: 12.956
+Epoch: [1/4], Batch: 160/9482, Loss: 5008.980, Trans_L2_m: 13.719, Yaw_err_deg: 10.983
+Epoch: [1/4], Batch: 170/9482, Loss: 3923.494, Trans_L2_m: 11.288, Yaw_err_deg: 11.203
+Epoch: [1/4], Batch: 180/9482, Loss: 3053.829, Trans_L2_m: 11.379, Yaw_err_deg: 3.831
+Epoch: [1/4], Batch: 190/9482, Loss: 2889.548, Trans_L2_m: 9.447, Yaw_err_deg: 8.889
+Epoch: [1/4], Batch: 200/9482, Loss: 4097.182, Trans_L2_m: 11.334, Yaw_err_deg: 10.895
+Epoch: [1/4], Batch: 210/9482, Loss: 3650.251, Trans_L2_m: 9.921, Yaw_err_deg: 14.545
+Epoch: [1/4], Batch: 220/9482, Loss: 2281.961, Trans_L2_m: 6.914, Yaw_err_deg: 8.389
+Epoch: [1/4], Batch: 230/9482, Loss: 3953.899, Trans_L2_m: 10.433, Yaw_err_deg: 13.468
+Epoch: [1/4], Batch: 240/9482, Loss: 3287.959, Trans_L2_m: 9.356, Yaw_err_deg: 12.448
+Epoch: [1/4], Batch: 250/9482, Loss: 3026.059, Trans_L2_m: 9.072, Yaw_err_deg: 8.660
+Epoch: [1/4], Batch: 260/9482, Loss: 3345.457, Trans_L2_m: 8.994, Yaw_err_deg: 12.935
+Epoch: [1/4], Batch: 270/9482, Loss: 2979.157, Trans_L2_m: 8.451, Yaw_err_deg: 11.798
+Epoch: [1/4], Batch: 280/9482, Loss: 3573.801, Trans_L2_m: 10.207, Yaw_err_deg: 8.527
+Epoch: [1/4], Batch: 290/9482, Loss: 3070.631, Trans_L2_m: 9.623, Yaw_err_deg: 6.605
+Epoch: [1/4], Batch: 300/9482, Loss: 3086.007, Trans_L2_m: 8.157, Yaw_err_deg: 13.397
+Epoch: [1/4], Batch: 310/9482, Loss: 4063.254, Trans_L2_m: 11.000, Yaw_err_deg: 11.933
+Epoch: [1/4], Batch: 320/9482, Loss: 3515.845, Trans_L2_m: 10.241, Yaw_err_deg: 8.100
+Epoch: [1/4], Batch: 330/9482, Loss: 1851.698, Trans_L2_m: 5.073, Yaw_err_deg: 9.293
+Epoch: [1/4], Batch: 340/9482, Loss: 2757.863, Trans_L2_m: 8.754, Yaw_err_deg: 8.959
+Epoch: [1/4], Batch: 350/9482, Loss: 2497.036, Trans_L2_m: 7.635, Yaw_err_deg: 9.211
+Epoch: [1/4], Batch: 360/9482, Loss: 3269.608, Trans_L2_m: 7.815, Yaw_err_deg: 11.949
+Epoch: [1/4], Batch: 370/9482, Loss: 3361.536, Trans_L2_m: 8.973, Yaw_err_deg: 9.104
+Epoch: [1/4], Batch: 380/9482, Loss: 3932.024, Trans_L2_m: 9.433, Yaw_err_deg: 13.789
+Epoch: [1/4], Batch: 390/9482, Loss: 2881.409, Trans_L2_m: 6.409, Yaw_err_deg: 13.362
+Epoch: [1/4], Batch: 400/9482, Loss: 2247.726, Trans_L2_m: 5.413, Yaw_err_deg: 12.977
+Epoch: [1/4], Batch: 410/9482, Loss: 2791.689, Trans_L2_m: 7.345, Yaw_err_deg: 9.499
+Epoch: [1/4], Batch: 420/9482, Loss: 3972.435, Trans_L2_m: 9.126, Yaw_err_deg: 13.437
+Epoch: [1/4], Batch: 430/9482, Loss: 2714.677, Trans_L2_m: 7.519, Yaw_err_deg: 8.270
+Epoch: [1/4], Batch: 440/9482, Loss: 2139.926, Trans_L2_m: 6.747, Yaw_err_deg: 7.262
+Epoch: [1/4], Batch: 450/9482, Loss: 2952.031, Trans_L2_m: 7.499, Yaw_err_deg: 12.343
+Epoch: [1/4], Batch: 460/9482, Loss: 4394.281, Trans_L2_m: 9.883, Yaw_err_deg: 15.288
+Epoch: [1/4], Batch: 470/9482, Loss: 2523.120, Trans_L2_m: 7.336, Yaw_err_deg: 7.920
+Epoch: [1/4], Batch: 480/9482, Loss: 2763.446, Trans_L2_m: 6.760, Yaw_err_deg: 11.410
+Epoch: [1/4], Batch: 490/9482, Loss: 3218.188, Trans_L2_m: 8.582, Yaw_err_deg: 10.038
+Epoch: [1/4], Batch: 500/9482, Loss: 2318.456, Trans_L2_m: 5.634, Yaw_err_deg: 12.267
+Epoch: [1/4], Batch: 510/9482, Loss: 2460.136, Trans_L2_m: 7.985, Yaw_err_deg: 4.334
+Epoch: [1/4], Batch: 520/9482, Loss: 2614.332, Trans_L2_m: 7.028, Yaw_err_deg: 10.711
+Epoch: [1/4], Batch: 530/9482, Loss: 2306.183, Trans_L2_m: 6.275, Yaw_err_deg: 9.567
+Epoch: [1/4], Batch: 540/9482, Loss: 3229.742, Trans_L2_m: 7.171, Yaw_err_deg: 13.607
+Epoch: [1/4], Batch: 550/9482, Loss: 2557.939, Trans_L2_m: 7.859, Yaw_err_deg: 7.733
+Epoch: [1/4], Batch: 560/9482, Loss: 3868.063, Trans_L2_m: 10.061, Yaw_err_deg: 9.827
+Epoch: [1/4], Batch: 570/9482, Loss: 3543.763, Trans_L2_m: 8.470, Yaw_err_deg: 11.896
+Epoch: [1/4], Batch: 580/9482, Loss: 3166.958, Trans_L2_m: 7.955, Yaw_err_deg: 10.468
+Epoch: [1/4], Batch: 590/9482, Loss: 1427.440, Trans_L2_m: 2.641, Yaw_err_deg: 9.983
+Epoch: [1/4], Batch: 600/9482, Loss: 2558.958, Trans_L2_m: 6.257, Yaw_err_deg: 9.050
+Epoch: [1/4], Batch: 610/9482, Loss: 2073.011, Trans_L2_m: 5.604, Yaw_err_deg: 9.480
+Epoch: [1/4], Batch: 620/9482, Loss: 1459.841, Trans_L2_m: 4.030, Yaw_err_deg: 7.926
+Epoch: [1/4], Batch: 630/9482, Loss: 1621.589, Trans_L2_m: 4.460, Yaw_err_deg: 7.214
+Epoch: [1/4], Batch: 640/9482, Loss: 1673.619, Trans_L2_m: 4.833, Yaw_err_deg: 8.993
+Epoch: [1/4], Batch: 650/9482, Loss: 1127.260, Trans_L2_m: 2.481, Yaw_err_deg: 7.725
+Epoch: [1/4], Batch: 660/9482, Loss: 2664.533, Trans_L2_m: 6.438, Yaw_err_deg: 9.629
+Epoch: [1/4], Batch: 670/9482, Loss: 2642.001, Trans_L2_m: 5.804, Yaw_err_deg: 11.387
+Epoch: [1/4], Batch: 680/9482, Loss: 2172.107, Trans_L2_m: 4.754, Yaw_err_deg: 10.280
+Epoch: [1/4], Batch: 690/9482, Loss: 2168.303, Trans_L2_m: 6.345, Yaw_err_deg: 7.337
+Epoch: [1/4], Batch: 700/9482, Loss: 2813.915, Trans_L2_m: 6.366, Yaw_err_deg: 10.913
+Epoch: [1/4], Batch: 710/9482, Loss: 1839.728, Trans_L2_m: 5.114, Yaw_err_deg: 6.743
+Epoch: [1/4], Batch: 720/9482, Loss: 3467.457, Trans_L2_m: 6.857, Yaw_err_deg: 13.924
+Epoch: [1/4], Batch: 730/9482, Loss: 1915.634, Trans_L2_m: 4.807, Yaw_err_deg: 9.939
+Epoch: [1/4], Batch: 740/9482, Loss: 1915.889, Trans_L2_m: 4.157, Yaw_err_deg: 10.798
+Epoch: [1/4], Batch: 750/9482, Loss: 2316.305, Trans_L2_m: 5.171, Yaw_err_deg: 11.577
+Epoch: [1/4], Batch: 760/9482, Loss: 2046.034, Trans_L2_m: 4.997, Yaw_err_deg: 7.411
+Epoch: [1/4], Batch: 770/9482, Loss: 1413.342, Trans_L2_m: 4.222, Yaw_err_deg: 4.700
+Epoch: [1/4], Batch: 780/9482, Loss: 2021.944, Trans_L2_m: 4.210, Yaw_err_deg: 12.137
+Epoch: [1/4], Batch: 790/9482, Loss: 2369.314, Trans_L2_m: 6.073, Yaw_err_deg: 10.094
+Epoch: [1/4], Batch: 800/9482, Loss: 1841.390, Trans_L2_m: 2.869, Yaw_err_deg: 12.969
+Epoch: [1/4], Batch: 810/9482, Loss: 2031.666, Trans_L2_m: 4.962, Yaw_err_deg: 7.867
+Epoch: [1/4], Batch: 820/9482, Loss: 2172.273, Trans_L2_m: 5.214, Yaw_err_deg: 8.085
+Epoch: [1/4], Batch: 830/9482, Loss: 1202.030, Trans_L2_m: 2.979, Yaw_err_deg: 6.807
+Epoch: [1/4], Batch: 840/9482, Loss: 1160.368, Trans_L2_m: 4.323, Yaw_err_deg: 5.047
+Epoch: [1/4], Batch: 850/9482, Loss: 1679.683, Trans_L2_m: 4.869, Yaw_err_deg: 4.346
+Epoch: [1/4], Batch: 860/9482, Loss: 1759.421, Trans_L2_m: 4.642, Yaw_err_deg: 7.109
+Epoch: [1/4], Batch: 870/9482, Loss: 1977.595, Trans_L2_m: 3.205, Yaw_err_deg: 10.227
+Epoch: [1/4], Batch: 880/9482, Loss: 2417.664, Trans_L2_m: 5.717, Yaw_err_deg: 6.797
+Epoch: [1/4], Batch: 890/9482, Loss: 2210.600, Trans_L2_m: 3.575, Yaw_err_deg: 12.858
+Epoch: [1/4], Batch: 900/9482, Loss: 1405.755, Trans_L2_m: 3.821, Yaw_err_deg: 7.878
+Epoch: [1/4], Batch: 910/9482, Loss: 1789.493, Trans_L2_m: 2.844, Yaw_err_deg: 13.743
+Epoch: [1/4], Batch: 920/9482, Loss: 1271.348, Trans_L2_m: 3.413, Yaw_err_deg: 8.519
+Epoch: [1/4], Batch: 930/9482, Loss: 3081.527, Trans_L2_m: 5.432, Yaw_err_deg: 14.143
+Epoch: [1/4], Batch: 940/9482, Loss: 1333.802, Trans_L2_m: 2.980, Yaw_err_deg: 7.267
+Epoch: [1/4], Batch: 950/9482, Loss: 2160.260, Trans_L2_m: 2.704, Yaw_err_deg: 13.785
+Epoch: [1/4], Batch: 960/9482, Loss: 1124.444, Trans_L2_m: 3.988, Yaw_err_deg: 7.294
+Epoch: [1/4], Batch: 970/9482, Loss: 1242.897, Trans_L2_m: 3.385, Yaw_err_deg: 5.634
+Epoch: [1/4], Batch: 980/9482, Loss: 1710.396, Trans_L2_m: 3.094, Yaw_err_deg: 10.442
+Epoch: [1/4], Batch: 990/9482, Loss: 1327.559, Trans_L2_m: 2.591, Yaw_err_deg: 9.074
+Epoch: [1/4], Batch: 1000/9482, Loss: 1070.652, Trans_L2_m: 2.838, Yaw_err_deg: 4.294
+Epoch: [1/4], Batch: 1010/9482, Loss: 961.343, Trans_L2_m: 2.327, Yaw_err_deg: 3.981

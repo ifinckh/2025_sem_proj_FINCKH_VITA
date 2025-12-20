@@ -116,16 +116,20 @@ def zod_homography_loss(four_pred, sat_img, rot_gt, trans_gt, resolution, orien=
 
         # ---- loss: translation + yaw ----
 
-        err_yaw = yaw_pred - yaw_gt_deg
+        # err_yaw = yaw_pred - yaw_gt_deg
         # wrap to [-180,180]
-        err_yaw = (err_yaw + 180.0) % 360.0 - 180.0
-        ori_loss = err_yaw.abs()
-        ori_loss = ori_loss.nanmean()
+        # err_yaw = (err_yaw + 180.0) % 360.0 - 180.0
+        # With this (using inputs in DEGREES):
+        diff_rad = torch.deg2rad(yaw_pred - yaw_gt_deg)
+        ori_loss = (1.0 - torch.cos(diff_rad)).nanmean()
+        
+        # print(ori_loss.item() * w3,torch.nanmean((x-y)**2).item())
 
         # Original vigor_gps_loss style scaling
         i_loss = torch.nanmean((x-y)**2)
         i_loss += ori_loss * w3
         v_loss += weight * i_loss
+        # print("i_loss:", i_loss.item(), v_loss.item(), weight)
         
         # remember last prediction for metrics
         x_last = x
