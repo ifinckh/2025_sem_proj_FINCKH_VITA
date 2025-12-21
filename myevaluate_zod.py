@@ -48,7 +48,7 @@ def evaluate_hcnet_zod(model, val_loader, args):
         # intensity= batch["intensity"]           # (B,N)
         # heading  = batch["heading"]             # (B,)
 
-        B, _, H, W = sat_img.shape
+        B, C, H, W = sat_img.shape
         sz = [B, 1, H, W]
 
         # Forward
@@ -58,15 +58,15 @@ def evaluate_hcnet_zod(model, val_loader, args):
         t_list.append(t1 - t0)
         
         
-        loss, metric, _ = zod_homography_loss(four_pred, sat_img, rot_gt, trans_gt, resolution, w3=w3, orien=True, gamma=args.gamma)
+        x_pred, y_pred, yaw_pred = predict_pose(four_pred, sat_img, resolution)
 
         
-        pred_dx_m = metric["pred_dx_m"]
-        pred_dy_m = metric["pred_dy_m"]
-        gt_dx_m = metric["gt_dx_m"]
-        gt_dy_m = metric["gt_dy_m"]
-        pred_yaw_deg = metric["pred_yaw_deg"]
-        gt_yaw_deg = metric["gt_yaw_deg"]
+        pred_dx_m = x_pred
+        pred_dy_m = y_pred
+        gt_dx_m = trans_gt[:,0]
+        gt_dy_m = trans_gt[:,1]
+        pred_yaw_deg = yaw_pred
+        gt_yaw_deg = torch.rad2deg(torch.atan2(rot_gt[:, 1, 0], rot_gt[:, 0, 0]))  # (B,)
         
         # Compute metrics
         dx_m = pred_dx_m - gt_dx_m
@@ -79,33 +79,35 @@ def evaluate_hcnet_zod(model, val_loader, args):
         yaw_err_deg.extend(torch.abs(dyaw_deg).cpu().numpy().tolist())
         
         
-        
-        # Optional probability at GT (if corr_fn present)
-        if hasattr(model, "corr_fn") or corr_fn is not None:
-            cf = corr_fn if corr_fn is not None else model.corr_fn
-            corr_map = cf.corr_pyramid[0]  # (B, Hf*Wf, Hf, Wf) or similar
-            h, w = corr_map.shape[-2:]
-            corr_map = corr_map.view((-1, h, w, h, w))
-            temp = h // 2
-            sim_matrix = corr_map[:, temp, temp, :, :]       # (B, h, w)
+        try : 
+            # Optional probability at GT (if corr_fn present)
+            if hasattr(model, "corr_fn") or corr_fn is not None:
+                cf = corr_fn if corr_fn is not None else model.corr_fn
+                corr_map = cf.corr_pyramid[0]  # (B, Hf*Wf, Hf, Wf) or similar
+                h, w = corr_map.shape[-2:]
+                corr_map = corr_map.view((-1, h, w, h, w))
+                temp = h // 2
+                sim_matrix = corr_map[:, temp, temp, :, :]       # (B, h, w)
 
-            # Softmax over all positions with temperature
-            temperature = 400.0
-            sm = F.softmax(sim_matrix.view(B, -1) / temperature, dim=1)
-            sm = sm.view(B, 1, h, w)
+                # Softmax over all positions with temperature
+                temperature = 400.0
+                sm = F.softmax(sim_matrix.view(B, -1) / temperature, dim=1)
+                sm = sm.view(B, 1, h, w)
 
-            # Normalize GT pixel to [-1,1] grid at corr resolution
-            gt_grid = (gt_dx_m / W) * (w - 1)  # scale to [0,w-1]
-            gt_norm = 2 * gt_grid / (w - 1) - 1
-            grid = gt_norm.view(B,1,1,2)    # (B,1,1,2) as (x,y)
+                # Normalize GT pixel to [-1,1] grid at corr resolution
+                gt_grid = (gt_dx_m / W) * (w - 1)  # scale to [0,w-1]
+                gt_norm = 2 * gt_grid / (w - 1) - 1
+                grid = gt_norm.view(B,1,1,2)    # (B,1,1,2) as (x,y)
 
-            prob = F.grid_sample(sm, grid, align_corners=True)  # (B,1,1,1)
-            prob_at_gt.extend(prob.view(B).tolist())
+                prob = F.grid_sample(sm, grid, align_corners=True)  # (B,1,1,1)
+                prob_at_gt.extend(prob.view(B).tolist())
+        except:
+            pass
 
         if (i+1) % args.log_every == 0:
             print(f"[{i+1}] m_l2={np.mean(meters_l2):.3f}, "
                   f"yaw_err={np.mean(yaw_err_deg):.2f}deg, "
-                  f"prob@gt={np.mean(prob_at_gt):.4f}" if prob_at_gt else
+                  f"prob@gt={np.mean(prob_at_gt):.4f}" if prob_at_gt else ""
                   f"[{i+1}] m_l2={np.mean(meters_l2):.3f}, "
                   f"yaw_err={np.mean(yaw_err_deg):.2f}deg")
 

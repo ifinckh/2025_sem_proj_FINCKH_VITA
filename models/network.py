@@ -169,7 +169,7 @@ class HCNet(nn.Module):
         four_point_disp = torch.zeros((sz[0], 2, 2, 2), device=fmap1.device)
         
         # ################################################################################
-        # pth_path = "metrics/feature_visualization/features.pth"
+        # pth_path = "metrics/feature_visualization/features2.pth"
 
         # # suppose these come from your model
         # # img_feature: (C,H,W) or (C,) tensor

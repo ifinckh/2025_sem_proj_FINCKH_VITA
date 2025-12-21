@@ -11,11 +11,11 @@
     "orig_label": false,
     "cross_area": false,
 
-    "batch_size": 5,
+    "batch_size": 8,
     "lr": 0.00035,
-    "num_steps": 39000,
+    "num_steps": 70000,
     "scheduler": "OneCycle",
-    "loss_w": [0.1, 1.0, 400000.0],
+    "loss_w": [0.1, 30.0, 100000.0],
     "temperature": 4.0,
 
     "augment": false,

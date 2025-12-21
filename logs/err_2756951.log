@@ -1,0 +1,12 @@
+Loading infos: 0it [00:00, ?it/s]Loading infos: 1it [00:01,  1.08s/it]Loading infos: 29it [00:01, 26.73it/s]
+Loading infos: 0it [00:00, ?it/s]Loading infos: 1it [00:00,  1.20it/s]Loading infos: 29it [00:00, 34.83it/s]
+Traceback (most recent call last):
+  File "/home/finckh/VITA/HC-Net/train.py", line 378, in <module>
+    train(config)
+  File "/home/finckh/VITA/HC-Net/train.py", line 246, in train
+    scheduler.step()
+  File "/home/finckh/miniconda3/envs/dg/lib/python3.10/site-packages/torch/optim/lr_scheduler.py", line 238, in step
+    values = self.get_lr()
+  File "/home/finckh/miniconda3/envs/dg/lib/python3.10/site-packages/torch/optim/lr_scheduler.py", line 2120, in get_lr
+    raise ValueError(
+ValueError: Tried to step 39101 times. The specified number of total steps is 39100

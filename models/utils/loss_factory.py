@@ -163,6 +163,66 @@ def zod_homography_loss(four_pred, sat_img, rot_gt, trans_gt, resolution, orien=
     }
     return v_loss, metrics, y
 
+def predict_pose(four_pred, sat_img, resolution):
+    B, _, H, W = sat_img.shape
+    device = sat_img.device
+    sz = [B, 1, H, W]
+    cx = (W - 1) / 2.0
+    cy = (H - 1) / 2.0
+    res = resolution.view(B, 1).to(device)
+
+
+    if isinstance(four_pred, list):
+        preds = four_pred
+    else:
+        preds = [four_pred]
+
+    
+    for i, four in enumerate(preds):
+        H_mat = get_homograpy(four, sz)  # (B,3,3)
+
+        pts = torch.tensor(
+            [[[cx], [cy], [1.0]]],
+            dtype=torch.float32, device=device
+        ).repeat(B, 1, 1)               # (B,3,1)
+
+        x = H_mat.bmm(pts)              # (B,3,1)
+        x = x / x[:, 2:3, :]
+        x = x[:, 0:2, 0]                # (B,2)
+        
+        dpix = x - torch.tensor(
+            [cx, cy], dtype=torch.float32, device=device
+        ).view(1, 2)                           # (B,2)
+
+        txy_pred = dpix * res                  # (B,2) meters
+        
+        # ---- yaw from homography ----
+        # apply H to center and a point a bit above center to recover orientation
+        pts2 = torch.tensor(
+            [[[cx], [cy - 10.0], [1.0]]],
+            dtype=torch.float32,
+            device=device
+        ).repeat(B, 1, 1)                      # (B,3,1)
+
+        x2 = H_mat.bmm(pts2)
+        x2 = x2 / x2[:, 2:3, :]
+        x2 = x2[:, 0:2, 0]                     # (B,2)
+
+        # vector from center to "up" point in warped frame
+        v = x2 - x                             # (B,2)
+        yaw_pred = torch.rad2deg(torch.atan2(v[:, 0], -v[:, 1]))  # (B,)
+        
+        # remember last prediction for metrics
+        txy_pred_last = txy_pred
+        yaw_pred_last = yaw_pred
+ 
+    # metrics from last prediction in m
+    x_pred = float(txy_pred_last[:, 0].mean().item())
+    y_pred = float(txy_pred_last[:, 1].mean().item())
+    yaw_pred = float(yaw_pred_last.mean().item())
+    
+    return x_pred, y_pred, yaw_pred
+
 
 # These work well, but did just 
 
