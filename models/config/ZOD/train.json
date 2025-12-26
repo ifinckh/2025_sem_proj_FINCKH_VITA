@@ -6,6 +6,7 @@
     "flow": true,
     "p_siamese": true,
     "CNN16": true,
+    "log_every":50,
 
     "dataset": "zod",
     "orig_label": false,

@@ -6,10 +6,18 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import csv
+import os
+from datetime import datetime  
+import json
+from easydict import EasyDict
+
 
 from models.network import HCNet
 # from models.utils.utils import get_homograpy
-import dataset as datasets  # your fetch_dataloader
+# import dataset as datasets  # your fetch_dataloader
+import dataset.ZOD as datasets
+
 from collections import defaultdict
 
 def to_device(batch, device):
@@ -21,11 +29,50 @@ def to_device(batch, device):
             out[k] = v
     return out
 
+def log_metrics_csv(filepath, scene_name, frame_name, iteration, meters_l2, yaw_err_deg, time_ms):
+    """
+    Append training metrics to a CSV file.
+
+    Args:
+        filepath (str): Path to the CSV file.
+        scene_name (str): Name of the scene.
+        batch_name (str): Name of the batch.
+        iteration (int): Iteration number within the epoch.
+        meters_l2 (float): Mean location error in meters.
+        yaw_err_deg (float): Orientation estimation error in degrees.
+        time_ms (float): Time per batch in milliseconds.
+    """
+
+    # Check if file already exists
+    file_exists = os.path.isfile(filepath)    
+    with open(filepath, mode="a", newline="") as f:
+        writer = csv.writer(f)
+
+        # Write header if new file
+        if not file_exists:
+            writer.writerow(["scene_name", "frame_name", "iteration", "meters_l2", "yaw_err_deg", "time_ms"])
+
+        # Append data row
+        writer.writerow([scene_name, frame_name, iteration, meters_l2, yaw_err_deg, time_ms])
+
 @torch.no_grad()
 def evaluate_hcnet_zod(model, val_loader, args):
     model.eval()
     device = next(model.parameters()).device
+    
+    ####### Setup CSV logging
+    date_str = datetime.now().strftime("%Y_%m_%d")
+    csv_folder = "metrics/val/"
+    # Find available test number folder
+    test_num = 0
+    while True:
+        file_path = os.path.join(csv_folder, f"{date_str}_{test_num}.csv")
+        if not os.path.exists(file_path):
+            break
+        test_num += 1
+    val_metrics_file_path = file_path
 
+    # Metrics accumulators
     meters_l2, pix_l2 = [], []
     yaw_err_deg = []
     prob_at_gt = []
@@ -46,7 +93,7 @@ def evaluate_hcnet_zod(model, val_loader, args):
         resolution     = batch["resolution"]    # (B,)
         # points   = batch["points"]              # (B,N,3)
         # intensity= batch["intensity"]           # (B,N)
-        # heading  = batch["heading"]             # (B,)
+        # gt_heading  = batch["heading"]          # (B,)
 
         B, C, H, W = sat_img.shape
         sz = [B, 1, H, W]
@@ -108,8 +155,10 @@ def evaluate_hcnet_zod(model, val_loader, args):
             print(f"[{i+1}] m_l2={np.mean(meters_l2):.3f}, "
                   f"yaw_err={np.mean(yaw_err_deg):.2f}deg, "
                   f"prob@gt={np.mean(prob_at_gt):.4f}" if prob_at_gt else ""
-                  f"[{i+1}] m_l2={np.mean(meters_l2):.3f}, "
-                  f"yaw_err={np.mean(yaw_err_deg):.2f}deg")
+                  f", time/batch={np.mean(t_list)*1000:.2f}ms")
+        
+        log_metrics_csv(val_metrics_file_path,batch["scene_name"], batch["name"], i, meters_l2[-1], yaw_err_deg[-1],t_list[-1]*1000 )
+            
 
     print("==== ZOD evaluation (HC‑Net homography) ====")
     print(f"Avg meter L2: {np.mean(meters_l2):.3f}")
@@ -132,8 +181,10 @@ def build_val_loader(args):
         from train import zod_collate_fn  # reuse your collate
     except Exception:
         zod_collate_fn = None
+    nw = min([os.cpu_count(), args.batch_size if args.batch_size > 1 else 0, 12])  # number of workers
+
     return DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False,
-                      num_workers=args.num_workers, pin_memory=True,
+                      num_workers=nw, pin_memory=True,
                       collate_fn=zod_collate_fn)
 
 def load_model(args, device):
@@ -161,6 +212,8 @@ def load_model(args, device):
 def main():
     p = argparse.ArgumentParser()
     p.add_argument('--restore_ckpt', type=str, default='checkpoints/best_checkpoint_zod.pth')
+    p.add_argument('--config', type=str, help="path of config file")
+
     p.add_argument('--model', type=str, default=None)
     p.add_argument('--gpuid', type=int, nargs='+', default=[0])
     p.add_argument('--iters_lev0', type=int, default=6)
@@ -169,11 +222,25 @@ def main():
     p.add_argument('--validation', type=str, default='val')
     p.add_argument('--log_every', type=int, default=50)
     args = p.parse_args()
+    
+    config = json.load(open(args.config,'r'))
+    config = EasyDict(config)
+    config['config'] = args.config
+    # config['best_dis'] = args.best_dis
+    config['validation'] = args.validation
+    # config['name'] = args.name
+    config['restore_ckpt'] = args.restore_ckpt
+    # config['start_step'] = args.start_step
+    if args.batch_size: 
+        config['batch_size'] = args.batch_size
+
+    print(config)
+
 
     device = torch.device('cuda:'+str(args.gpuid[0]) if torch.cuda.is_available() else 'cpu')
-    model = load_model(args, device)
-    val_loader = build_val_loader(args)
-    evaluate_hcnet_zod(model, val_loader, args)
+    model = load_model(config, device)
+    val_loader = build_val_loader(config)
+    evaluate_hcnet_zod(model, val_loader, config)
 
 if __name__ == "__main__":
     main()
