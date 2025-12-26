@@ -51,6 +51,12 @@ def log_metrics_csv(filepath, scene_name, frame_name, iteration, meters_l2, yaw_
         # Write header if new file
         if not file_exists:
             writer.writerow(["scene_name", "frame_name", "iteration", "meters_l2", "yaw_err_deg", "time_ms"])
+            
+        # make "scene_name", "frame_name" tensors into cpu lists
+        if isinstance(scene_name, torch.Tensor):
+            scene_name = scene_name.cpu().tolist()
+        if isinstance(frame_name, torch.Tensor):
+            frame_name = frame_name.cpu().tolist()
 
         # Append data row
         writer.writerow([scene_name, frame_name, iteration, meters_l2, yaw_err_deg, time_ms])
@@ -105,11 +111,11 @@ def evaluate_hcnet_zod(model, val_loader, args):
         t_list.append(t1 - t0)
         
         
-        x_pred, y_pred, yaw_pred = predict_pose(four_pred, sat_img, resolution)
+        trans_pred, yaw_pred = predict_pose(four_pred, sat_img, resolution)
 
         
-        pred_dx_m = x_pred
-        pred_dy_m = y_pred
+        pred_dx_m = trans_pred[:,0]
+        pred_dy_m = trans_pred[:,1]
         gt_dx_m = trans_gt[:,0]
         gt_dy_m = trans_gt[:,1]
         pred_yaw_deg = yaw_pred
@@ -152,9 +158,9 @@ def evaluate_hcnet_zod(model, val_loader, args):
             pass
 
         if (i+1) % args.log_every == 0:
-            print(f"[{i+1}] m_l2={np.mean(meters_l2):.3f}, "
-                  f"yaw_err={np.mean(yaw_err_deg):.2f}deg, "
-                  f"prob@gt={np.mean(prob_at_gt):.4f}" if prob_at_gt else ""
+            print(f"[{i+1}] m_l2={np.mean(meters_l2):.3f}, ", 
+                  f"yaw_err={np.mean(yaw_err_deg):.2f}deg, ", 
+                  f"prob@gt={np.mean(prob_at_gt):.4f}" if prob_at_gt else "", 
                   f", time/batch={np.mean(t_list)*1000:.2f}ms")
         
         log_metrics_csv(val_metrics_file_path,batch["scene_name"], batch["name"], i, meters_l2[-1], yaw_err_deg[-1],t_list[-1]*1000 )

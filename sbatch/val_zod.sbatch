@@ -5,8 +5,8 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=20
 #SBATCH --gres=gpu:1
-#SBATCH --mem=50G
-#SBATCH --time=45:00:00
+#SBATCH --mem=100G
+#SBATCH --time=5:00:00
 #SBATCH --output=/home/finckh/VITA/HC-Net/logs/log_%j.log
 #SBATCH --error=/home/finckh/VITA/HC-Net/logs/err_%j.log
 

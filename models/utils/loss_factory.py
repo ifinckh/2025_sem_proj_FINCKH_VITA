@@ -217,11 +217,11 @@ def predict_pose(four_pred, sat_img, resolution):
         yaw_pred_last = yaw_pred
  
     # metrics from last prediction in m
-    x_pred = float(txy_pred_last[:, 0].mean().item())
-    y_pred = float(txy_pred_last[:, 1].mean().item())
-    yaw_pred = float(yaw_pred_last.mean().item())
+    # x_pred = float(txy_pred_last[:, 0].mean().item())
+    # y_pred = float(txy_pred_last[:, 1].mean().item())
+    # yaw_pred = float(yaw_pred_last.mean().item())
     
-    return x_pred, y_pred, yaw_pred
+    return txy_pred_last, yaw_pred_last   # shapes: (B,), (B,), (B,)
 
 
 # These work well, but did just 
