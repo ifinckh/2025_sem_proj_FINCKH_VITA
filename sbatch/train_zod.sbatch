@@ -3,10 +3,10 @@
 #SBATCH --chdir=/home/finckh/VITA/HC-Net
 #SBATCH --account=civil-459
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=20
+#SBATCH --cpus-per-task=10
 #SBATCH --gres=gpu:1
 #SBATCH --mem=100G
-#SBATCH --time=45:00:00
+#SBATCH --time=70:00:00
 #SBATCH --output=/home/finckh/VITA/HC-Net/logs/log_%j.log
 #SBATCH --error=/home/finckh/VITA/HC-Net/logs/err_%j.log
 

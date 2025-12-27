@@ -12,7 +12,7 @@
     "orig_label": false,
     "cross_area": false,
 
-    "batch_size": 8,
+    "batch_size": 16,
     "lr": 0.00035,
     "num_steps": 70000,
     "scheduler": "OneCycle",
@@ -26,7 +26,7 @@
     "restore_ckpt": null,
     "model": null,
 
-    "wdecay": 0.0005,
+    "wdecay": 0.001,
     "epsilon": 1e-7,  
     "clip": 1.0,
     "gamma": 0.85 ,    
