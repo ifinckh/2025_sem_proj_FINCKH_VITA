@@ -3,7 +3,7 @@
 #SBATCH --chdir=/home/finckh/VITA/HC-Net
 #SBATCH --account=civil-459
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=10
+#SBATCH --cpus-per-task=20
 #SBATCH --gres=gpu:1
 #SBATCH --mem=100G
 #SBATCH --time=70:00:00
