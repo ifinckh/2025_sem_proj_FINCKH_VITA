@@ -121,44 +121,11 @@ def fetch_optimizer(args, model):
 
 def train(args):
     
-    if True:
-        date_str = datetime.now().strftime("%Y_%m_%d")
-        csv_folder = "metrics/train/"
-        # Find available test number folder
-        test_num = 0
-        while True:
-            file_path = os.path.join(csv_folder, f"{date_str}_{test_num}.csv")
-            if not os.path.exists(file_path):
-                break
-            test_num += 1
-        train_metrics_file_path = file_path
-        csv_folder = "metrics/val/"
-        # Find available test number folder
-        test_num = 0
-        while True:
-            file_path = os.path.join(csv_folder, f"{date_str}_{test_num}.csv")
-            if not os.path.exists(file_path):
-                break
-            test_num += 1
-        val_metrics_file_path = file_path
-        csv_folder = "metrics/test/"
-        # Find available test number folder
-        test_num = 0
-        while True:
-            file_path = os.path.join(csv_folder, f"{date_str}_{test_num}.csv")
-            if not os.path.exists(file_path):
-                break
-            test_num += 1
-        test_metrics_file_path = file_path
-        # Find available model save path
-        pth_folder = "checkpoints/"
-        test_num = 0
-        while True:
-            file_path = os.path.join(pth_folder, f"{date_str}_best_checkpoint_zod_{test_num}.pth")
-            if not os.path.exists(file_path):
-                break
-            test_num += 1
-        checkpoint_path = file_path
+    date_str = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+    train_metrics_file_path = os.path.join("metrics/train/", f"{date_str}.csv")
+    val_metrics_file_path = os.path.join("metrics/val/", f"{date_str}.csv")
+    test_metrics_file_path = os.path.join("metrics/test/", f"{date_str}.csv")
+    checkpoint_path = os.path.join("checkpoints/", f"{date_str}_best_checkpoint_zod.pth")
 
     model = nn.DataParallel(HCNet(args), device_ids=args.gpuid)
     print("Parameter Count: %d" % count_parameters(model))

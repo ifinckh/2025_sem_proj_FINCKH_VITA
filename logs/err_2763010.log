@@ -1,34 +1,0 @@
-Loading infos: 0it [00:00, ?it/s]Loading infos: 1it [00:01,  1.05s/it]Loading infos: 29it [00:01, 27.61it/s]
-Loading infos: 0it [00:00, ?it/s]Loading infos: 1it [00:00,  1.10it/s]Loading infos: 29it [00:00, 31.85it/s]
-Traceback (most recent call last):
-  File "/home/finckh/VITA/HC-Net/train.py", line 389, in <module>
-    train(config)
-  File "/home/finckh/VITA/HC-Net/train.py", line 221, in train
-    four_pred, corr_fn = model(
-  File "/home/finckh/miniconda3/envs/dg/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
-    return self._call_impl(*args, **kwargs)
-  File "/home/finckh/miniconda3/envs/dg/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1747, in _call_impl
-    return forward_call(*args, **kwargs)
-  File "/home/finckh/miniconda3/envs/dg/lib/python3.10/site-packages/torch/nn/parallel/data_parallel.py", line 191, in forward
-    return self.module(*inputs[0], **module_kwargs[0])
-  File "/home/finckh/miniconda3/envs/dg/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
-    return self._call_impl(*args, **kwargs)
-  File "/home/finckh/miniconda3/envs/dg/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1747, in _call_impl
-    return forward_call(*args, **kwargs)
-  File "/home/finckh/VITA/HC-Net/models/network.py", line 137, in forward
-    _, multiscale_sat = self.sat_efficientnet.extract_features_multiscale(sat_img)
-  File "/home/finckh/VITA/HC-Net/models/efficientnet_pytorch/model.py", line 321, in extract_features_multiscale
-    x = block(x, drop_connect_rate=drop_connect_rate)
-  File "/home/finckh/miniconda3/envs/dg/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
-    return self._call_impl(*args, **kwargs)
-  File "/home/finckh/miniconda3/envs/dg/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1747, in _call_impl
-    return forward_call(*args, **kwargs)
-  File "/home/finckh/VITA/HC-Net/models/efficientnet_pytorch/model.py", line 104, in forward
-    x = self._expand_conv(inputs)
-  File "/home/finckh/miniconda3/envs/dg/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
-    return self._call_impl(*args, **kwargs)
-  File "/home/finckh/miniconda3/envs/dg/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1747, in _call_impl
-    return forward_call(*args, **kwargs)
-  File "/home/finckh/VITA/HC-Net/models/efficientnet_pytorch/utils.py", line 281, in forward
-    x = F.conv2d(x, self.weight, self.bias, self.stride, self.padding, self.dilation, self.groups)
-torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 288.00 MiB. GPU 0 has a total capacity of 31.74 GiB of which 231.12 MiB is free. Including non-PyTorch memory, this process has 31.49 GiB memory in use. Of the allocated memory 30.85 GiB is allocated by PyTorch, and 288.87 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)

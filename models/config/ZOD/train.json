@@ -12,9 +12,9 @@
     "orig_label": false,
     "cross_area": false,
 
-    "batch_size":32,
+    "batch_size": 16,
     "lr": 0.00035,
-    "num_steps": 35000,
+    "num_steps": 70000,
     "scheduler": "OneCycle",
     "loss_w": [0.1, 30.0, 100000.0],
     "temperature": 4.0,
