@@ -17,4 +17,4 @@ else
     exit 1
 fi
 
-# python -u myevaluate_zod.py --iters_lev0 6 --batch_size 12 --restore_ckpt checkpoints/2025_12_21_best_checkpoint_zod_0.pth --config models/config/ZOD/train.json
+# python -u myevaluate_zod.py --iters_lev0 6 --batch_size 32 --restore_ckpt checkpoints/2025_12_21_best_checkpoint_zod_0.pth --config models/config/ZOD/train.json

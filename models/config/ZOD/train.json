@@ -12,7 +12,7 @@
     "orig_label": false,
     "cross_area": false,
 
-    "batch_size": 16,
+    "batch_size": 32,
     "lr": 0.00035,
     "num_steps": 70000,
     "scheduler": "OneCycle",
@@ -49,7 +49,7 @@
     "max_rot_deg" : 20.0,
     "z_range" : [-2.5, 3.0],
     "BEV_grid_resolution" : 0.1,
-    "lidar_dataset_root": "/work/vita/datasets/zod",  
+    "lidar_dataset_root": "/work/vita/datasets/zod",
     "aerial_img_dataset_root": "/work/vita/datasets/zod_crossview_processed_100m",
     "version": "full"
 }

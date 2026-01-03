@@ -1,0 +1,7 @@
+{'gpuid': [0], 'mixed_precision': False, 'iters_lev0': 6, 'lev0': True, 'flow': True, 'p_siamese': True, 'CNN16': True, 'log_every': 10, 'dataset': 'zod', 'orig_label': False, 'cross_area': False, 'batch_size': 32, 'lr': 0.00035, 'num_steps': 70000, 'scheduler': 'OneCycle', 'loss_w': [0.1, 30.0, 100000.0], 'temperature': 4.0, 'augment': False, 'ori_noise': 45.0, 'orien': True, 'restore_ckpt': 'checkpoints/2025_12_27_best_checkpoint_zod_0.pth', 'model': None, 'wdecay': 0.0005, 'epsilon': 1e-07, 'clip': 1.0, 'gamma': 0.85, 'name': 'HC-Net', 'validation': 'val', 'image_size': 512, 'zoom': 20, 'IMG_FREQ': 20000, 'SUM_FREQ': 100, 'use_augmentation': True, 'image_area_dg_m': 51.2, 'image_area_zod_m': 100, 'max_translation': 15.0, 'max_rot_deg': 20.0, 'z_range': [-2.5, 3.0], 'BEV_grid_resolution': 0.1, 'lidar_dataset_root': '/work/vita/datasets/zod', 'aerial_img_dataset_root': '/work/vita/datasets/zod_crossview_processed_100m', 'version': 'full', 'config': 'models/config/ZOD/train.json'}
+Loaded pretrained weights for efficientnet-b0
+Loaded checkpoint: checkpoints/2025_12_27_best_checkpoint_zod_0.pth
+Loading val split : 6 drives
+Validation with 10393 samples.
+Logging metrics to: metrics/val/2026_01_03_18_13_30_hcnet_zod_eval.csv
+Starting evaluation on 325 batches...
