@@ -5,3 +5,57 @@ Loading val split : 6 drives
 Validation with 10393 samples.
 Logging metrics to: metrics/val/2026_01_03_18_13_05_hcnet_zod_eval.csv
 Starting evaluation on 325 batches...
+[10/325] Mean L2: 0.428m | Mean Yaw: 2.03°
+[20/325] Mean L2: 0.464m | Mean Yaw: 1.88°
+[30/325] Mean L2: 0.474m | Mean Yaw: 2.31°
+[40/325] Mean L2: 0.503m | Mean Yaw: 2.69°
+[50/325] Mean L2: 0.521m | Mean Yaw: 2.46°
+[60/325] Mean L2: 0.535m | Mean Yaw: 2.18°
+[70/325] Mean L2: 0.530m | Mean Yaw: 2.07°
+[80/325] Mean L2: 0.532m | Mean Yaw: 2.54°
+[90/325] Mean L2: 0.541m | Mean Yaw: 2.95°
+[100/325] Mean L2: 0.550m | Mean Yaw: 2.74°
+[110/325] Mean L2: 0.550m | Mean Yaw: 3.14°
+[120/325] Mean L2: 0.548m | Mean Yaw: 3.13°
+[130/325] Mean L2: 0.542m | Mean Yaw: 3.33°
+[140/325] Mean L2: 0.543m | Mean Yaw: 3.33°
+[150/325] Mean L2: 0.562m | Mean Yaw: 3.38°
+[160/325] Mean L2: 0.555m | Mean Yaw: 3.40°
+[170/325] Mean L2: 0.553m | Mean Yaw: 3.74°
+[180/325] Mean L2: 0.546m | Mean Yaw: 4.08°
+[190/325] Mean L2: 0.540m | Mean Yaw: 4.13°
+[200/325] Mean L2: 0.542m | Mean Yaw: 4.17°
+[210/325] Mean L2: 0.543m | Mean Yaw: 4.28°
+[220/325] Mean L2: 0.536m | Mean Yaw: 4.33°
+[230/325] Mean L2: 0.535m | Mean Yaw: 4.42°
+[240/325] Mean L2: 0.527m | Mean Yaw: 4.37°
+[250/325] Mean L2: 0.522m | Mean Yaw: 4.51°
+[260/325] Mean L2: 0.516m | Mean Yaw: 4.48°
+[270/325] Mean L2: 0.512m | Mean Yaw: 4.35°
+[280/325] Mean L2: 0.509m | Mean Yaw: 4.34°
+[290/325] Mean L2: 0.510m | Mean Yaw: 4.38°
+[300/325] Mean L2: 0.509m | Mean Yaw: 4.31°
+[310/325] Mean L2: 0.504m | Mean Yaw: 4.39°
+[320/325] Mean L2: 0.501m | Mean Yaw: 4.52°
+
+========================================
+ FINAL RESULTS (N=10393)
+========================================
+Position Error (m):
+  Mean:   0.4978 m
+  Median: 0.4378 m
+  Std:    0.3148 m
+--------------------
+Orientation Error (°):
+  Mean:   4.5129°
+  Median: 2.4616°
+--------------------
+Success Rates (Recalls):
+  @1m:    93.42%
+  @3m:    99.96%
+  @5m:    99.98%
+  @10m:   100.00%
+--------------------
+  @1°:    25.29%
+  @5°:    73.14%
+========================================
