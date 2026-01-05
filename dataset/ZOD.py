@@ -123,10 +123,19 @@ class ZOD(torch.utils.data.Dataset):
         # Create single progress bar
         # pbar = tqdm(total=total_frames, desc="Processing ZOD Drives", unit="Frame", colour="blue")
         
+        # manually add bad samples found during evaluation
+        good_batches_trans = [[17,1093],[5,1579],[28,524]]
+        good_batches_rot = [[17,611],[17,723],[17,2244],[7,996]]
+        bad_batches_trans = [[2,266],[2,354],[2,795],[7,1626]]
+        bad_batches_rot = [[5,424],[5,1399],[5,1401],[7,338]]
+        interest_samples = pd.DataFrame(data=good_batches_trans+good_batches_rot+bad_batches_trans+bad_batches_rot,
+                        columns=['scene_name', 'name'])
+        
         # for drive_key in list(task_data_subset):
         for drive_key in task_data_subset:
-            
             drive_idx = int(drive_key)
+            if drive_idx not in interest_samples.scene_name.unique():
+                continue
             drive = self.zod_drives[drive_idx]
             drive_path = os.path.join(self.lidar_dataset_root, 'drives', drive_key )
             aerial_path = os.path.join(self.aerial_img_dataset_root,'drives',drive.metadata.country_code, drive_key, "aerial")
@@ -200,6 +209,10 @@ class ZOD(torch.utils.data.Dataset):
                 # skip bad samples
                 if len(bad_samples.loc[(bad_samples.scene_name.astype(int) == drive_idx) & (bad_samples.name.astype(int) == frame_idx)]):
                     continue
+                # take only the interest samples
+                if len(interest_samples.loc[(interest_samples.scene_name.astype(int) == drive_idx) & (interest_samples.name.astype(int) == frame_idx)]):
+                    self.metadata_list.append([drive_idx,frame_idx, aerial_img_data_df.loc[(aerial_img_data_df.drive_idx.astype(int) == drive_idx) & (aerial_img_data_df.frame_idx == frame_idx), ['aerial_latlon', 'heading', 'aerial_image', 'resolution'] ].to_dict(orient='records')[0] ])
+
                 
                 # if frame_idx > 30:
                 #     break
@@ -210,7 +223,7 @@ class ZOD(torch.utils.data.Dataset):
                 # else:
                 #     continue
                 
-                self.metadata_list.append([drive_idx,frame_idx, aerial_img_data_df.loc[(aerial_img_data_df.drive_idx.astype(int) == drive_idx) & (aerial_img_data_df.frame_idx == frame_idx), ['aerial_latlon', 'heading', 'aerial_image', 'resolution'] ].to_dict(orient='records')[0] ])
+                # self.metadata_list.append([drive_idx,frame_idx, aerial_img_data_df.loc[(aerial_img_data_df.drive_idx.astype(int) == drive_idx) & (aerial_img_data_df.frame_idx == frame_idx), ['aerial_latlon', 'heading', 'aerial_image', 'resolution'] ].to_dict(orient='records')[0] ])
                 # pbar.update(1)
                 
         # pbar.close()
