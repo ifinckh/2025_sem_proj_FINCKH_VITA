@@ -1,13 +1,0 @@
-Loading infos: 0it [00:00, ?it/s]Loading infos: 1it [00:01,  1.24s/it]Loading infos: 29it [00:01, 23.41it/s]
-Loading infos: 0it [00:00, ?it/s]Loading infos: 1it [00:00,  1.20it/s]Loading infos: 29it [00:00, 34.81it/s]
-Loading infos: 0it [00:00, ?it/s]Loading infos: 1it [00:01,  1.55s/it]Loading infos: 29it [00:01, 18.76it/s]
-Traceback (most recent call last):
-  File "/home/finckh/VITA/HC-Net/train.py", line 356, in <module>
-    train(config)
-  File "/home/finckh/VITA/HC-Net/train.py", line 314, in train
-    evaluate_hcnet_zod(model, val_dataset, args=args)
-  File "/home/finckh/miniconda3/envs/dg/lib/python3.10/site-packages/torch/utils/_contextlib.py", line 116, in decorate_context
-    return func(*args, **kwargs)
-  File "/home/finckh/VITA/HC-Net/myevaluate_zod.py", line 104, in evaluate_hcnet_zod
-    B, C, H, W = sat_img.shape
-ValueError: not enough values to unpack (expected 4, got 3)
