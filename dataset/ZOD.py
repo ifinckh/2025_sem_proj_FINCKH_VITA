@@ -214,7 +214,7 @@ class ZOD(torch.utils.data.Dataset):
                 #     self.metadata_list.append([drive_idx,frame_idx, aerial_img_data_df.loc[(aerial_img_data_df.drive_idx.astype(int) == drive_idx) & (aerial_img_data_df.frame_idx == frame_idx), ['aerial_latlon', 'heading', 'aerial_image', 'resolution'] ].to_dict(orient='records')[0] ])
 
                 
-                # if frame_idx > 30:
+                # if frame_idx > 10:
                 #     break
                 
                 # use only subsample of frames for faster training

@@ -79,41 +79,59 @@ def render_pred_gt_frame(
     y_gt = H // 2 - pts_gt[:, 1]
     m_gt = (x_gt >= 0) & (x_gt < W) & (y_gt >= 0) & (y_gt < H)
 
-    # --- draw ---
-    fig, ax = plt.subplots(1, 2, figsize=figsize, dpi=dpi)
-    fig.subplots_adjust(left=0, right=1, bottom=0, top=1, wspace=0.01, hspace=0)
-    
+        # --- draw (FIXED LAYOUT) ---
+    fig = plt.figure(figsize=figsize, dpi=dpi)
 
-    ax[0].imshow(img, origin="upper")
-    ax[0].scatter(x_pred[m_pred], y_pred[m_pred], s=0.2, c="r", alpha=0.2)
-    ax[0].set_title("Predicted")
-    ax[0].set_aspect("equal")
-    
-    ax[0].set_xticks([]); ax[0].set_yticks([])
-    ax[0].axis('off')
-    
-    ax[1].imshow(img, origin="upper")
-    ax[1].scatter(x_gt[m_gt], y_gt[m_gt], s=0.2, c="r", alpha=0.2)
-    ax[1].set_title("GT")
-    ax[1].set_aspect("equal")
-    ax[1].set_xticks([]); ax[1].set_yticks([])
-    ax[1].axis('off')
-    if title is not None:
-        fig.suptitle(title)
+    # A dedicated title row prevents per-frame resizing/jitter
+    gs = fig.add_gridspec(
+        nrows=2, ncols=2,
+        height_ratios=[1, 18],     # <-- adjust title band height here
+        hspace=0.0, wspace=0.01
+    )
 
+    ax_title = fig.add_subplot(gs[0, :])
+    ax0 = fig.add_subplot(gs[1, 0])
+    ax1 = fig.add_subplot(gs[1, 1])
+
+    # Title axis (fixed position, fixed height)
+    ax_title.axis("off")
+    if title:
+        ax_title.text(0.5, 0.5, title, ha="center", va="center",
+                      fontsize=12, color="black", weight="bold")
+
+    # Predicted (Left)
+    ax0.imshow(img, origin="upper")
+    ax0.scatter(x_pred[m_pred], y_pred[m_pred], s=0.2, c="r", alpha=0.2, clip_on=True)
+    ax0.set_aspect("equal")
+    ax0.axis("off")
+    ax0.text(0.02, 0.95, "PREDICTED", transform=ax0.transAxes,
+             fontsize=10, color="white", weight="bold", ha="left", va="top",
+             bbox=dict(facecolor="black", alpha=0.5, edgecolor="none", pad=2))
+
+    # GT (Right)
+    ax1.imshow(img, origin="upper")
+    ax1.scatter(x_gt[m_gt], y_gt[m_gt], s=0.2, c="r", alpha=0.2, clip_on=True)
+    ax1.set_aspect("equal")
+    ax1.axis("off")
+    ax1.text(0.02, 0.95, "GROUND TRUTH", transform=ax1.transAxes,
+             fontsize=10, color="white", weight="bold", ha="left", va="top",
+             bbox=dict(facecolor="black", alpha=0.5, edgecolor="none", pad=2))
+    
     fig.tight_layout()
 
-    # --- canvas -> RGB uint8 (FIXED FOR MATPLOTLIB 3.8+) ---
+    # EXTRA SAFETY: freeze limits so nothing can autoscale and shrink the image
+    for a in (ax0, ax1):
+        a.set_xlim(-0.5, W - 0.5)
+        a.set_ylim(H - 0.5, -0.5)   # because origin="upper"
+        a.set_autoscale_on(False)
+
+    # --- canvas -> RGB uint8 ---
     fig.canvas.draw()
-    # Get RGBA buffer and convert to numpy array
     frame = np.asarray(fig.canvas.buffer_rgba()) 
-    # Drop the Alpha channel (RGBA -> RGB) to match video writer expectation
     frame = frame[:, :, :3]
     
     plt.close(fig)
     return frame
-
-
 
 def create_drive_video(model, val_loader, args):
     """
@@ -155,7 +173,7 @@ def create_drive_video(model, val_loader, args):
     else:
         raise ValueError(f"Unsupported video extension: {ext} (use .mp4 or .gif)")
 
-    print(f"Creating drive overlay video: {video_path} @ {video_fps} fps")
+        print(f"Creating drive overlay video: {video_path} @ {video_fps} fps")
     print(f"Processing {len(val_loader)} batches...")
 
     try:
@@ -219,7 +237,7 @@ def create_drive_video(model, val_loader, args):
                 # Title with errors
                 l2_err = float(batch_l2[j].detach().cpu().item())
                 yaw_err = float(batch_yaw_err[j].detach().cpu().item())
-                title = f"{scenes[j]} / {frames[j]} | L2={l2_err:.2f}m | ΔYaw={np.abs(yaw_err):.2f}°"
+                title = f"{scenes[j]} / {frames[j]} | L2={l2_err:.2f}m | ΔYaw={yaw_err:.2f}°"
 
                 frame_rgb = render_pred_gt_frame(
                     sat_img_chw=sat_cpu,
