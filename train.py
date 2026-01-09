@@ -225,7 +225,7 @@ def train(args):
             
             if i_batch % 10 == 0:
                 print(
-                    f'Epoch: [{epoch+1}/{num_epochs}], Batch: {i_batch}/{len(train_loader)}, '
+                    f'Epoch: [{epoch}/{num_epochs}], Batch: {i_batch}/{len(train_loader)}, '
                     f'Loss: {loss.cpu().item():.3f}, '
                     f'Trans_L2_m: {metrics["trans_l2_m"]:.3f}, '
                     f'Yaw_err_deg: {metrics["yaw_err_deg"]:.3f}'

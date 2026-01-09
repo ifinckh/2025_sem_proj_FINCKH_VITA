@@ -215,7 +215,7 @@ class ZOD(torch.utils.data.Dataset):
                 #     self.metadata_list.append([drive_idx,frame_idx, aerial_img_data_df.loc[(aerial_img_data_df.drive_idx.astype(int) == drive_idx) & (aerial_img_data_df.frame_idx == frame_idx), ['aerial_latlon', 'heading', 'aerial_image', 'resolution'] ].to_dict(orient='records')[0] ])
 
                 
-                # if frame_idx > 0:
+                # if frame_idx > 20:
                 #     break
                 
                 # use only subsample of frames for faster training
@@ -282,11 +282,23 @@ class ZOD(torch.utils.data.Dataset):
         dx_m = (cx - c) * res
         dy_m = (c - cy) * res
         translation = np.array([dx_m, dy_m, 0.0], dtype=np.float32)
+        
+        if self.use_augmentation:
+            # sample synthetic offset in meters and radians
+            dtheta = np.deg2rad(np.random.uniform(-self.max_rot_deg, self.max_rot_deg))
+            dtheta += theta  # total rotation
+            
+            # build 3x3 rotation around z
+            cos_t, sin_t = np.cos(dtheta), np.sin(dtheta)
+            Rz = np.array([[cos_t, -sin_t, 0.0],
+                        [sin_t,  cos_t, 0.0],
+                        [0.0,    0.0,   1.0]], dtype=np.float32)
 
-        cos_t, sin_t = np.cos(theta), np.sin(theta)
-        rotation = np.array([[cos_t, -sin_t, 0.0],
-                            [sin_t,  cos_t, 0.0],
-                            [0.0,    0.0,   1.0]], dtype=np.float32)
+            # apply to points (choose convention: perturb LiDAR)
+            points = (Rz @ points.T).T
+
+            # store offset between perturbed LiDAR and aerial
+            rotation = Rz      # (3,3)
 
         # -------------------- BEV from LiDAR (no extra perturbation) --------------------
         bev_lidar = self.zod_points_to_bev_pixor_like(points, intensity)
@@ -468,7 +480,6 @@ class ZOD(torch.utils.data.Dataset):
         #     [np.cos(theta), -np.sin(theta)],
         #     [np.sin(theta), np.cos(theta)]
         # ])
-
 
         translation = np.array([aerial_easting - T_current[0, 3] , aerial_northing - T_current[1, 3]]) 
         
