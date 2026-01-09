@@ -68,8 +68,8 @@ def zod_homography_loss(four_pred, sat_img, rot_gt, trans_gt, resolution, orien=
     y1_m = sin_t * x0_m + cos_t * y0_m + dy   # (B,1)
 
     x_gt_pix = x1_m / res + cx     # (B,1)
-    # y_gt_pix = y1_m / res + cy     # (B,1)
-    y_gt_pix = cy - (y1_m / res)   # (B,1)  # metric +y up -> pixel y down
+    y_gt_pix = y1_m / res + cy     # (B,1)
+    # y_gt_pix = cy - (y1_m / res)   # (B,1)  # metric +y up -> pixel y down
     y = torch.cat([x_gt_pix, y_gt_pix], dim=1)  # (B,2)
     
     # --- GT yaw (deg) from rot_gt ---
@@ -98,7 +98,7 @@ def zod_homography_loss(four_pred, sat_img, rot_gt, trans_gt, resolution, orien=
         ).view(1, 2)                           # (B,2)
 
         txy_pred = dpix * res                  # (B,2) meters
-        txy_pred[:, 1] = -txy_pred[:, 1] # pixel y down -> metric +y up
+        # txy_pred[:, 1] = -txy_pred[:, 1] # pixel y down -> metric +y up
         
         # ---- yaw from homography ----
         # apply H to center and a point a bit above center to recover orientation
@@ -197,7 +197,7 @@ def predict_pose(four_pred, sat_img, resolution):
         ).view(1, 2)                           # (B,2)
 
         txy_pred = dpix * res                  # (B,2) meters
-        txy_pred[:, 1] = -txy_pred[:, 1] # pixel y down -> metric +y up
+        # txy_pred[:, 1] = -txy_pred[:, 1] # pixel y down -> metric +y up
         
         # ---- yaw from homography ----
         # apply H to center and a point a bit above center to recover orientation
