@@ -1,4 +1,3 @@
-from operator import index
 import sys
 sys.path.append('..')
 
@@ -111,7 +110,7 @@ class ZOD(torch.utils.data.Dataset):
         
         ####### For debugging, use only subset of training drives ########
         # task_data_subset = ["000009","000007"] 
-        # task_data_subset = task_data_subset[:1]
+        task_data_subset = task_data_subset[:1]
         
         bad_samples = pd.read_csv("dataset/dataset_utils/bad_ids.csv")
 
@@ -215,7 +214,7 @@ class ZOD(torch.utils.data.Dataset):
                 #     self.metadata_list.append([drive_idx,frame_idx, aerial_img_data_df.loc[(aerial_img_data_df.drive_idx.astype(int) == drive_idx) & (aerial_img_data_df.frame_idx == frame_idx), ['aerial_latlon', 'heading', 'aerial_image', 'resolution'] ].to_dict(orient='records')[0] ])
 
                 
-                # if frame_idx > 0:
+                # if frame_idx > 10:
                 #     break
                 
                 # use only subsample of frames for faster training
@@ -232,88 +231,120 @@ class ZOD(torch.utils.data.Dataset):
 
     def __len__(self):
         return len(self.metadata_list)
+
     
     def __getitem__(self, index):
-        # Load sample
-        image_rgb, points, resolution, focal, theta, heading, intensity, metadata, success = self.open_vilsoc_outputs(index)
+        data_dict = {}
+            
+        image_rgb, points, resolution, focal, heading, intensity, metadata, success = self.open_vilsoc_outputs(index)
+        # image_rgb_orig = image_rgb.copy()
+        # data_dict['image_rgb_init'] = image_rgb.astype(np.float32) # for visualisation
 
+        
         if not success:
-            drive_idx, frame_idx, _ = self.metadata_list[index]
+            drive_idx, frame_idx, _  = self.metadata_list[index]
             print(f"Focal out of image bounds, at dataset index {[drive_idx, frame_idx]}")
+            
+            # write in the broken batch (since we're already skipping the bad ones in the init)
             with open("dataset/dataset_utils/bad_ids.csv", "a", newline="") as f:
                 writer = csv.writer(f)
-                writer.writerow([metadata["scene_name"], metadata["name"], 4])
+                writer.writerow([metadata["scene_name"],metadata["name"],4])
+                
+            return None
+        
+        
+        
+        ########################################## image ####################################
+        H, W = image_rgb.shape[:2]
+        
+        # half crop in pixels to get exactly image_area_dg_m in meters
+        half_crop_px = int(0.5 * self.image_area_dg_m * H / self.image_area_zod_m)
+
+        cx, cy = int(focal[0]), int(focal[1])
+
+        # check bounds
+        if (cx - half_crop_px < 0) or (cx + half_crop_px > W) or (cy - half_crop_px < 0) or (cy + half_crop_px > H):
+            drive_idx, frame_idx, _  = self.metadata_list[index]
+            print(f"ZOD offset too large ! Skipping sample at index {[drive_idx, frame_idx]}. Focal = {cx, cy}, Half crop in px : {half_crop_px}")
+            
+            # write in the broken batch (since we're already skipping the bad ones in the init)
+            with open("dataset/dataset_utils/bad_ids.csv", "a", newline="") as f:
+                writer = csv.writer(f)
+                writer.writerow([metadata["scene_name"],metadata["name"],2])
+                
             return None
 
-        # -------------------- Image (square) --------------------
-        H0, W0 = image_rgb.shape[:2]
-        # if H0 != W0:
-        #     raise ValueError(f"Expected square aerial image, got H={H0}, W={W0}")
+        image_rgb = image_rgb[cy - half_crop_px : cy + half_crop_px,
+                            cx - half_crop_px : cx + half_crop_px]
 
-        # focal in original pixel coords
-        cx0, cy0 = float(focal[0]), float(focal[1])
-
-        # If focal is outside the image, skip (extra safety)
-        if cx0 < 0 or cy0 < 0 or cx0 > (W0 - 1) or cy0 > (H0 - 1):
-            drive_idx, frame_idx, _ = self.metadata_list[index]
-            print(f"Focal out of square image. Skipping sample {[drive_idx, frame_idx]}.")
-            return None
-
-        # Resize image to model input
-        S = int(self.final_img_shape)
-        image_rgb = cv2.resize(image_rgb, (S, S), interpolation=cv2.INTER_LINEAR)
-
-        # Update resolution after resize:
-        # meters-per-pixel increases when you downsample, decreases when you upsample.
-        res = float(resolution) * (float(H0) / float(S))  # (m/pix)
-
-        # Scale focal to resized image coordinates
-        scale = float(S) / float(H0)
-        cx = cx0 * scale
-        cy = cy0 * scale
-
-        # Convert to tensor format (3,H,W) in [0,1]
+        image_rgb = cv2.resize(image_rgb, (self.final_img_shape, self.final_img_shape))
+        
+        # adjust resolution accordingly
+        resolution = self.image_area_dg_m / (self.hs * 2) # update resolution = size of the image in m / size of the image in pixels
+        
         img = image_rgb.astype(np.float32) / 255.0
-        img = np.transpose(img, (2, 0, 1))  # (3,S,S)
+        img = np.transpose(img, (2, 0, 1))  # (3, H, W)
+        
+        ########################################## point cloud ####################################
 
-        # -------------------- Labels: translation + rotation --------------------
-        # Image coordinates: x right, y down. [web:41]
-        c = (S - 1) / 2.0
-        dx_m = (cx - c) * res
-        dy_m = (c - cy) * res
-        translation = np.array([dx_m, dy_m, 0.0], dtype=np.float32)
+        rotation = np.eye(3, dtype=np.float32)
+        translation = np.zeros(3, dtype=np.float32)
 
-        cos_t, sin_t = np.cos(theta), np.sin(theta)
-        rotation = np.array([[cos_t, -sin_t, 0.0],
-                            [sin_t,  cos_t, 0.0],
-                            [0.0,    0.0,   1.0]], dtype=np.float32)
+        if self.use_augmentation:
+            # sample synthetic offset in meters and radians
+            dx = np.random.uniform(-self.max_translation, self.max_translation)
+            dy = np.random.uniform(-self.max_translation, self.max_translation)
+            dtheta = np.deg2rad(np.random.uniform(-self.max_rot_deg, self.max_rot_deg))
 
-        # -------------------- BEV from LiDAR (no extra perturbation) --------------------
+            # build 3x3 rotation around z
+            cos_t, sin_t = np.cos(dtheta), np.sin(dtheta)
+            Rz = np.array([[cos_t, -sin_t, 0.0],
+                        [sin_t,  cos_t, 0.0],
+                        [0.0,    0.0,   1.0]], dtype=np.float32)
+
+            # apply to points (choose convention: perturb LiDAR)
+            points = (Rz @ points.T).T
+            points[:, 0] += dx
+            points[:, 1] += dy
+
+            # store offset between perturbed LiDAR and aerial
+            rotation = Rz      # (3,3)
+            translation = np.array([dx, dy, 0.0], dtype=np.float32)
+        
         bev_lidar = self.zod_points_to_bev_pixor_like(points, intensity)
         if bev_lidar is None:
             drive_idx, frame_idx, _ = self.metadata_list[index]
             print(f"Empty BEV at index {[drive_idx, frame_idx]}")
+            # log to bad_ids if you want, then
             return None
+        
+        image = img.astype(np.float32).copy()           # (3,H,W)
+        bev   = bev_lidar.astype(np.float32).copy()     # (C,H,W)
+        rot   = rotation.astype(np.float32).copy()      # (3,3)
+        trans = translation.astype(np.float32).copy()   # (3,)
+        res   = np.float32(resolution)                  # (1)        m/pix
+        # subsample 30000 points
+        choice = np.random.choice(points.shape[0], 30000, replace=False)
+        points_subsampled = points[choice].astype(np.float32).copy()  # [30k, 3]
+        intensity_subsampled = intensity[choice].astype(np.float32).copy()  # [30k,]
+    
 
-        # Subsample points safely
-        n = points.shape[0]
-        k = min(30000, n)
-        choice = np.random.choice(n, k, replace=False)
-        points_sub = points[choice].astype(np.float32).copy()
-        intensity_sub = intensity[choice].astype(np.float32).copy()
+         ############## Save in dictionnary ###############
 
-        return {
-            "scene_name": metadata["scene_name"],
-            "name": metadata["name"],
-            "image": torch.from_numpy(img.copy()),
-            "bev_lidar": torch.from_numpy(bev_lidar.astype(np.float32).copy()),
-            "rotation": torch.from_numpy(rotation.copy()),
-            "translation": torch.from_numpy(translation.copy()),
-            "resolution": torch.tensor(np.float32(res), dtype=torch.float32),
-            "heading": torch.tensor(np.float32(heading), dtype=torch.float32),
-            "points": torch.from_numpy(points_sub),
-            "intensity": torch.from_numpy(intensity_sub),
-        }
+        data_dict = {
+            "scene_name": metadata['scene_name'],
+            "name": metadata['name'],
+            "image":      torch.from_numpy(image),
+            "bev_lidar":  torch.from_numpy(bev),
+            "rotation":   torch.from_numpy(rot),
+            "translation":torch.from_numpy(trans),
+            "resolution": torch.tensor(res, dtype=torch.float32),
+            "heading":   torch.tensor(np.float32(heading), dtype=torch.float32),
+            "points":     torch.from_numpy(points_subsampled),
+            "intensity":  torch.from_numpy(intensity_subsampled),
+            }
+        return data_dict
+
 
     def zod_points_to_bev_pixor_like(self, points_xyz, points_r):
         """
@@ -382,8 +413,6 @@ class ZOD(torch.utils.data.Dataset):
 
 
     def open_vilsoc_outputs(self, index): # , method = "transformed"
-        
-        
         drive_idx, frame_idx, aer_img_metadata  = self.metadata_list[index]
         drive = self.zod_drives[drive_idx]
         lat, lon, alt = self.drive_infos[drive_idx]['lat'], self.drive_infos[drive_idx]['lon'], self.drive_infos[drive_idx]['alt']
@@ -438,7 +467,7 @@ class ZOD(torch.utils.data.Dataset):
         heading_oxts = 90 - np.degrees(yaw_oxts)
     
         # Process Lidar Data
-    
+       
         lidar = drive.get_compensated_lidar(
             drive.info.camera_frames['front_blur'][frame_idx].time
         )
@@ -464,33 +493,30 @@ class ZOD(torch.utils.data.Dataset):
 
         # Rotate by aerial heading
         theta = np.radians(-(heading_oxts-aerial_heading)) 
-        # rotation_matrix = np.array([
-        #     [np.cos(theta), -np.sin(theta)],
-        #     [np.sin(theta), np.cos(theta)]
-        # ])
+        rotation_matrix = np.array([
+            [np.cos(theta), -np.sin(theta)],
+            [np.sin(theta), np.cos(theta)]
+        ])
 
 
         translation = np.array([aerial_easting - T_current[0, 3] , aerial_northing - T_current[1, 3]]) 
-        
-        # Centered 3D points around 0,0
-        points = pcd_utm - np.array(T_current[:3, 3])
+        # points_m = pcd_utm - np.array([T_current[0, 3], T_current[1, 3], 0])
+        points_m = pcd_utm - np.array(T_current[:3, 3])
 
         # Compute vehicle position in image coordinates
         vehicle_pixel_x = W // 2 - translation[0] / resolution
         vehicle_pixel_y = H // 2 + translation[1] / resolution  # Note: Y-axis flip
 
-        # Vehicle pixel coords
         focal = [vehicle_pixel_x, vehicle_pixel_y]
-
-        # Check if focal is within image bounds
+        
+        points_m[:, :2] =  points_m[:, :2] @ rotation_matrix.T
+        
         success = True
         if focal[0] > W or focal[1] > H or focal[0] < 0 or focal[1] < 0:
             success = False
-            
-        metadata_out = {'scene_name': drive_idx, 'name': frame_idx}
-        return bev_image, points, resolution, focal, theta, aerial_heading, intensity, metadata_out, success
-    
         
+        return bev_image, points_m, resolution, focal, aerial_heading, intensity, {'scene_name': drive_idx ,'name': frame_idx}, success
+
 def fetch_dataloader(args, split='train'):
     """
     For ZOD:

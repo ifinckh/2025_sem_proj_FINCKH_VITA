@@ -111,7 +111,7 @@ class ZOD(torch.utils.data.Dataset):
         
         ####### For debugging, use only subset of training drives ########
         # task_data_subset = ["000009","000007"] 
-        # task_data_subset = task_data_subset[:1]
+        task_data_subset = task_data_subset[:1]
         
         bad_samples = pd.read_csv("dataset/dataset_utils/bad_ids.csv")
 
@@ -215,8 +215,8 @@ class ZOD(torch.utils.data.Dataset):
                 #     self.metadata_list.append([drive_idx,frame_idx, aerial_img_data_df.loc[(aerial_img_data_df.drive_idx.astype(int) == drive_idx) & (aerial_img_data_df.frame_idx == frame_idx), ['aerial_latlon', 'heading', 'aerial_image', 'resolution'] ].to_dict(orient='records')[0] ])
 
                 
-                # if frame_idx > 0:
-                #     break
+                if frame_idx > 0:
+                    break
                 
                 # use only subsample of frames for faster training
                 # if frame_idx % 100 == 0:
@@ -235,7 +235,8 @@ class ZOD(torch.utils.data.Dataset):
     
     def __getitem__(self, index):
         # Load sample
-        image_rgb, points, resolution, focal, theta, heading, intensity, metadata, success = self.open_vilsoc_outputs(index)
+        image_rgb, points, resolution, focal, theta, heading, intensity, metadata, success = \
+            self.open_vilsoc_outputs(index)
 
         if not success:
             drive_idx, frame_idx, _ = self.metadata_list[index]
@@ -247,8 +248,8 @@ class ZOD(torch.utils.data.Dataset):
 
         # -------------------- Image (square) --------------------
         H0, W0 = image_rgb.shape[:2]
-        # if H0 != W0:
-        #     raise ValueError(f"Expected square aerial image, got H={H0}, W={W0}")
+        if H0 != W0:
+            raise ValueError(f"Expected square aerial image, got H={H0}, W={W0}")
 
         # focal in original pixel coords
         cx0, cy0 = float(focal[0]), float(focal[1])
@@ -280,7 +281,7 @@ class ZOD(torch.utils.data.Dataset):
         # Image coordinates: x right, y down. [web:41]
         c = (S - 1) / 2.0
         dx_m = (cx - c) * res
-        dy_m = (c - cy) * res
+        dy_m = (cy - c) * res
         translation = np.array([dx_m, dy_m, 0.0], dtype=np.float32)
 
         cos_t, sin_t = np.cos(theta), np.sin(theta)
@@ -383,7 +384,6 @@ class ZOD(torch.utils.data.Dataset):
 
     def open_vilsoc_outputs(self, index): # , method = "transformed"
         
-        
         drive_idx, frame_idx, aer_img_metadata  = self.metadata_list[index]
         drive = self.zod_drives[drive_idx]
         lat, lon, alt = self.drive_infos[drive_idx]['lat'], self.drive_infos[drive_idx]['lon'], self.drive_infos[drive_idx]['alt']
@@ -471,24 +471,21 @@ class ZOD(torch.utils.data.Dataset):
 
 
         translation = np.array([aerial_easting - T_current[0, 3] , aerial_northing - T_current[1, 3]]) 
-        
-        # Centered 3D points around 0,0
-        points = pcd_utm - np.array(T_current[:3, 3])
+        # points_m = pcd_utm - np.array([T_current[0, 3], T_current[1, 3], 0])
+        points_m = pcd_utm - np.array(T_current[:3, 3])
 
         # Compute vehicle position in image coordinates
         vehicle_pixel_x = W // 2 - translation[0] / resolution
         vehicle_pixel_y = H // 2 + translation[1] / resolution  # Note: Y-axis flip
 
-        # Vehicle pixel coords
         focal = [vehicle_pixel_x, vehicle_pixel_y]
 
-        # Check if focal is within image bounds
         success = True
         if focal[0] > W or focal[1] > H or focal[0] < 0 or focal[1] < 0:
             success = False
-            
+
         metadata_out = {'scene_name': drive_idx, 'name': frame_idx}
-        return bev_image, points, resolution, focal, theta, aerial_heading, intensity, metadata_out, success
+        return bev_image, points_m, resolution, focal, theta, aerial_heading, intensity, metadata_out, success
     
         
 def fetch_dataloader(args, split='train'):

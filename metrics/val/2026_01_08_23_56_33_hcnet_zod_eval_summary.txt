@@ -1,0 +1,8 @@
+Mean L2: 11.865254402160645
+Median L2: 11.865254402160645
+Mean Yaw: 0.2628231644630432
+Median Yaw: 0.2628231644630432
+Recall@1m: 0.0
+Recall@3m: 0.0
+Recall@5m: 0.0
+Recall@10m: 0.0

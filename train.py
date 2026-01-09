@@ -102,17 +102,6 @@ def fetch_optimizer(args, model):
     elif args.scheduler == 'OneCycle':
         scheduler = optim.lr_scheduler.OneCycleLR(optimizer, args.lr, args.num_steps+100,
             pct_start=0.05, cycle_momentum=False, anneal_strategy='linear')
-    # elif args.scheduler == 'OneCycle': # temp
-    #     scheduler = optim.lr_scheduler.OneCycleLR(
-    #         optimizer, 
-    #         max_lr=args.lr, 
-    #         total_steps=args.num_steps + 10,  # Match total_steps strictly
-    #         pct_start=0.1,                    # Spend a bit more time warming up (5% -> 10%)
-    #         cycle_momentum=False,             # Keep as False for AdamW
-    #         anneal_strategy='cos',            # CHANGE THIS: linear -> cos
-    #         div_factor=25.0,                  # Default, but good to be explicit
-    #         final_div_factor=1000.0           # Forces final LR to be very tiny (3.5e-7)
-    #     )
     elif args.scheduler == 'MultiCycle':
         scheduler = optim.lr_scheduler.CyclicLR(optimizer, base_lr=0.000005, max_lr=args.lr, # 9000  171000
             step_size_up=9000, step_size_down=171000, mode='triangular2',cycle_momentum = False)  #mode in ['triangular', 'triangular2', 'exp_range']
@@ -131,7 +120,7 @@ def train(args):
     print("Parameter Count: %d" % count_parameters(model))
 
     train_dataset, val_dataset = datasets.fetch_dataloader(args)
-    nw = min([os.cpu_count(), args.batch_size if args.batch_size > 1 else 0, 8])  # number of workers
+    nw = min([os.cpu_count(), args.batch_size if args.batch_size > 1 else 0, 12])  # number of workers
     # nw = 0  # debug
     print('Using {} dataloader workers every process'.format(nw)) # https://blog.csdn.net/ResumeProject/article/details/125449639
     train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,pin_memory=True, num_workers=nw, collate_fn=zod_collate_fn,)

@@ -12,11 +12,11 @@
     "orig_label": false,
     "cross_area": false,
 
-    "batch_size": 32,
+    "batch_size": 16,
     "lr": 0.00035,
-    "num_steps": 70000,
+    "num_steps": 76000,
     "scheduler": "OneCycle",
-    "loss_w": [0.1, 30.0, 100000.0],
+    "loss_w": [0.1, 30.0, 200000.0],
     "temperature": 4.0,
 
     "augment": false,
@@ -43,12 +43,12 @@
 
 
     "use_augmentation" : true,
-    "image_area_dg_m" : 51.2,
+    "image_area_dg_m" : 102.4,
     "image_area_zod_m" : 100,
     "max_translation" : 15.0,
     "max_rot_deg" : 20.0,
     "z_range" : [-2.5, 3.0],
-    "BEV_grid_resolution" : 0.1,
+    "BEV_grid_resolution" : 0.2,
     "lidar_dataset_root": "/work/vita/datasets/zod",
     "aerial_img_dataset_root": "/work/vita/datasets/zod_crossview_processed_100m",
     "version": "full"
