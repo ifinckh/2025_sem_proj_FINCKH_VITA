@@ -85,9 +85,10 @@ def evaluate_hcnet_zod(model, val_loader, args):
     print(f"Logging metrics to: {val_metrics_file_path}")
 
     # --- Accumulators ---
-    all_l2_errors = []
-    all_yaw_errors = []
-    all_times = []
+    max_x = 1000
+    max_y = 1000
+    max_norm = 1000
+    max_angle = 1000
     
     print(f"Starting evaluation on {len(val_loader)} batches...")
 
@@ -97,129 +98,31 @@ def evaluate_hcnet_zod(model, val_loader, args):
             continue
         batch = to_device(batch, device)
 
-        # Inputs (names aligned with your dataset/collate)
-        sat_img = batch["image"]                # (B,3,H,W)
-        bev     = batch["bev_lidar"]            # (B,C,Hb,Wb)
         rot_gt  = batch["rotation"]             # (B,3,3)
         trans_gt = batch["translation"]         # (B,3)
-        resolution = batch["resolution"]        # (B,)
 
-        # B = sat_img.shape[0]
-        # H = sat_img.shape[-2]
-        # W = sat_img.shape[-1]
-        # sz = [B, 1, H, W]
-
-        # --- Inference ---
-        torch.cuda.synchronize()
-        t0 = time.time()
-        four_pred, _ = model(bev, sat_img, sat_gps=None, iters_lev0=args.iters_lev0)
-        torch.cuda.synchronize()
-        t1 = time.time()
-        batch_time_ms = (t1 - t0) * 1000.0 / sat_img.shape[0] # Average time per sample in batch        
-        
-        trans_pred, yaw_pred = predict_pose(four_pred, sat_img, resolution)
-
-        
-        # --- Ground Truth Prep ---
-        gt_dx_m = trans_gt[:, 0]
-        gt_dy_m = trans_gt[:, 1]
+        gt_dx_m = trans_gt[0, 0]
+        gt_dy_m = trans_gt[0, 1]
         
         # Yaw from rotation matrix: atan2(R[1,0], R[0,0])
         # Make sure your coordinate system matches! (ZOD might use different convention)
-        gt_yaw_rad = torch.atan2(rot_gt[:, 1, 0], rot_gt[:, 0, 0])
+        gt_yaw_rad = torch.atan2(rot_gt[0, 1, 0], rot_gt[0, 0, 0])
         gt_yaw_deg = torch.rad2deg(gt_yaw_rad)
-
-        # --- Compute Errors ---
-        pred_dx_m = trans_pred[:, 0]
-        pred_dy_m = trans_pred[:, 1]
-
-        # 1. Position Error (L2)
-        batch_l2 = torch.sqrt((pred_dx_m - gt_dx_m)**2 + (pred_dy_m - gt_dy_m)**2)
         
-        # 2. Orientation Error (Angular Distance)
-        batch_yaw_err = angular_error(yaw_pred, gt_yaw_deg)
+        if abs(gt_dx_m) < max_x:
+            max_x = abs(gt_dx_m)
+        if abs(gt_dy_m) < max_y:
+            max_y = abs(gt_dy_m)
+        if torch.norm(trans_gt[0, :2]) < max_norm:
+            max_norm = torch.norm(trans_gt[0, :2])
+        if abs(gt_yaw_deg) < max_angle:
+            max_angle = abs(gt_yaw_deg)
 
-        # --- Logging ---
-        # Convert to list to log individually
-        l2_list = batch_l2.cpu().tolist()
-        yaw_list = batch_yaw_err.cpu().tolist()
-        
-        all_l2_errors.extend(l2_list)
-        all_yaw_errors.extend(yaw_list)
-        all_times.extend([batch_time_ms] * len(l2_list))
-
-        # Log to CSV line by line
-        scenes = batch["scene_name"]
-        frames = batch["name"]
-        # Handle if scenes/frames are strings or lists
-        if isinstance(scenes, torch.Tensor): scenes = scenes.cpu().tolist()
-        if isinstance(frames, torch.Tensor): frames = frames.cpu().tolist()
-        
-        for j in range(len(l2_list)):
-            log_metrics_csv(val_metrics_file_path, scenes[j], frames[j], i, l2_list[j], yaw_list[j], batch_time_ms)
-
-        if (i+1) % args.log_every == 0:
-            print(f"[{i+1}/{len(val_loader)}] "+
-                  f"Mean L2: {np.mean(all_l2_errors):.3f}m | "+
-                  f"Mean Yaw: {np.mean(all_yaw_errors):.2f}°")
-
-    # --- Final Report Calculation ---
-    all_l2_errors = np.array(all_l2_errors)
-    all_yaw_errors = np.array(all_yaw_errors)
-    all_times = np.array(all_times)
-
-    # 1. Basic Stats
-    mean_l2 = np.mean(all_l2_errors)
-    median_l2 = np.median(all_l2_errors)
-    std_l2 = np.std(all_l2_errors)
+    print(f"Max X offset in ZOD: {max_x:.2f} m")
+    print(f"Max Y offset in ZOD: {max_y:.2f} m")
+    print(f"Max translation norm in ZOD: {max_norm:.2f} m")
+    print(f"Max yaw angle in ZOD: {max_angle:.2f} deg")
     
-    mean_yaw = np.mean(all_yaw_errors)
-    median_yaw = np.median(all_yaw_errors)
-
-    # 2. Success Rates / Recalls
-    recall_1m = np.mean(all_l2_errors < 1.0) * 100
-    recall_2m = np.mean(all_l2_errors < 2.0) * 100
-    recall_5m = np.mean(all_l2_errors < 5.0) * 100
-    recall_10m = np.mean(all_l2_errors < 10.0) * 100
-    
-    recall_1deg = np.mean(all_yaw_errors < 1.0) * 100
-    recall_2deg = np.mean(all_yaw_errors < 2.0) * 100
-    recall_5deg = np.mean(all_yaw_errors < 5.0) * 100
-    recall_10deg = np.mean(all_yaw_errors < 10.0) * 100
-
-    print("\n" + "="*40)
-    print(f" FINAL RESULTS (N={len(all_l2_errors)})")
-    print("="*40)
-    print(f"Position Error (m):")
-    print(f"  Mean:   {mean_l2:.4f} m")
-    print(f"  Median: {median_l2:.4f} m")
-    print(f"  Std:    {std_l2:.4f} m")
-    print("-" * 20)
-    print(f"Orientation Error (°):")
-    print(f"  Mean:   {mean_yaw:.4f}°")
-    print(f"  Median: {median_yaw:.4f}°")
-    print("-" * 20)
-    print(f"Success Rates (Recalls):")
-    print(f"  @1m:    {recall_1m:.2f}%")
-    print(f"  @3m:    {recall_2m:.2f}%")
-    print(f"  @5m:    {recall_5m:.2f}%")
-    print(f"  @10m:   {recall_10m:.2f}%")
-    print("-" * 20)
-    print(f"  @1°:    {recall_1deg:.2f}%")
-    print(f"  @2°:    {recall_2deg:.2f}%")
-    print(f"  @5°:    {recall_5deg:.2f}%")
-    print(f"  @10°:   {recall_10deg:.2f}%")
-    print("="*40)
-    
-    # Save final summary
-    with open(val_metrics_file_path.replace(".csv", "_summary.txt"), "w") as f:
-        f.write(f"Mean L2: {mean_l2}\nMedian L2: {median_l2}\n")
-        f.write(f"Mean Yaw: {mean_yaw}\nMedian Yaw: {median_yaw}\n")
-        f.write(f"Recall@1m: {recall_1m}\nRecall@2m: {recall_2m}\n")
-        f.write(f"Recall@5m: {recall_5m}\nRecall@10m: {recall_10m}\n")
-        f.write(f"Recall@1deg: {recall_1deg}\nRecall@2deg: {recall_2deg}\n")
-        f.write(f"Recall@5deg: {recall_5deg}\nRecall@10deg: {recall_10deg}\n")
-
 def build_val_loader(args):
     # Reuse your dataset fetcher; expect the same zod_collate_fn as training
     # If your fetch_dataloader returns (train,val), adapt accordingly.
@@ -264,7 +167,6 @@ def load_model(args, device):
 
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument('--restore_ckpt', type=str, default='checkpoints/best_checkpoint_zod.pth')
     p.add_argument('--config', type=str, help="path of config file")
 
     p.add_argument('--model', type=str, default=None)
@@ -284,8 +186,7 @@ def main():
     # config['name'] = args.name
     config['restore_ckpt'] = args.restore_ckpt
     # config['start_step'] = args.start_step
-    if args.batch_size: 
-        config['batch_size'] = args.batch_size
+    config['batch_size'] = 1
 
     print(config)
 

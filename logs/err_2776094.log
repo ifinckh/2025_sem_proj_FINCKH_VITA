@@ -1,0 +1,6 @@
+Traceback (most recent call last):
+  File "/home/finckh/VITA/HC-Net/caract_zod.py", line 200, in <module>
+    main()
+  File "/home/finckh/VITA/HC-Net/caract_zod.py", line 187, in main
+    config['restore_ckpt'] = args.restore_ckpt
+AttributeError: 'Namespace' object has no attribute 'restore_ckpt'

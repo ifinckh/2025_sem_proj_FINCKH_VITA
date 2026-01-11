@@ -111,7 +111,7 @@ class ZOD(torch.utils.data.Dataset):
         
         ####### For debugging, use only subset of training drives ########
         # task_data_subset = ["000009","000007"] 
-        # task_data_subset = task_data_subset[:1]
+        task_data_subset = task_data_subset[:1]
         
         bad_samples = pd.read_csv("dataset/dataset_utils/bad_ids.csv")
 
@@ -219,13 +219,13 @@ class ZOD(torch.utils.data.Dataset):
                 #     break
                 
                 # use only subsample of frames for faster training
-                # if frame_idx % 100 == 0:
-                #     self.metadata_list.append([drive_idx,frame_idx, aerial_img_data_df.loc[(aerial_img_data_df.drive_idx.astype(int) == drive_idx) & (aerial_img_data_df.frame_idx == frame_idx), ['aerial_latlon', 'heading', 'aerial_image', 'resolution'] ].to_dict(orient='records')[0] ])
-                # else:
-                #     continue
+                if frame_idx % 100 == 0:
+                    self.metadata_list.append([drive_idx,frame_idx, aerial_img_data_df.loc[(aerial_img_data_df.drive_idx.astype(int) == drive_idx) & (aerial_img_data_df.frame_idx == frame_idx), ['aerial_latlon', 'heading', 'aerial_image', 'resolution'] ].to_dict(orient='records')[0] ])
+                else:
+                    continue
                 
-                self.metadata_list.append([drive_idx,frame_idx, aerial_img_data_df.loc[(aerial_img_data_df.drive_idx.astype(int) == drive_idx) & (aerial_img_data_df.frame_idx == frame_idx), ['aerial_latlon', 'heading', 'aerial_image', 'resolution'] ].to_dict(orient='records')[0] ])
-                # pbar.update(1)
+                # self.metadata_list.append([drive_idx,frame_idx, aerial_img_data_df.loc[(aerial_img_data_df.drive_idx.astype(int) == drive_idx) & (aerial_img_data_df.frame_idx == frame_idx), ['aerial_latlon', 'heading', 'aerial_image', 'resolution'] ].to_dict(orient='records')[0] ])
+                # # pbar.update(1)
                 
         # pbar.close()
             

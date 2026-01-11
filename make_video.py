@@ -53,6 +53,7 @@ def render_pred_gt_frame(
     img = sat_img_chw.float().permute(1, 2, 0).numpy()  # (H,W,3)
     pts = points_xyz.float().numpy()[:, :2]             # (N,2)
     H, W, _ = img.shape
+    c = (H-1)/2.0
     res = float(resolution_m_per_px)
 
     if max_points is not None and pts.shape[0] > max_points:
@@ -65,18 +66,18 @@ def render_pred_gt_frame(
                          [np.sin(theta),  np.cos(theta)]], dtype=np.float32)
     trans_pred = np.asarray(trans_pred_xy, dtype=np.float32).reshape(2,)
 
-    pts_pred = (pts - trans_pred) @ np.linalg.inv(rot_pred.T) / res
-    x_pred = W // 2 + pts_pred[:, 0]
-    y_pred = H // 2 - pts_pred[:, 1]
+    pts_pred = pts @ np.linalg.inv(rot_pred.T) + trans_pred
+    x_pred = c + pts_pred[:, 0] / res
+    y_pred = c - pts_pred[:, 1] / res
     m_pred = (x_pred >= 0) & (x_pred < W) & (y_pred >= 0) & (y_pred < H)
 
     # --- GT pose transform ---
     rot_gt = np.asarray(rot_gt_2x2, dtype=np.float32).reshape(2, 2)
     trans_gt = np.asarray(trans_gt_xy, dtype=np.float32).reshape(2,)
 
-    pts_gt = (pts - trans_gt) @ np.linalg.inv(rot_gt.T) / res
-    x_gt = W // 2 + pts_gt[:, 0]
-    y_gt = H // 2 - pts_gt[:, 1]
+    pts_gt = pts @ np.linalg.inv(rot_gt.T) + trans_gt
+    x_gt = c + pts_gt[:, 0] / res
+    y_gt = c - pts_gt[:, 1] / res
     m_gt = (x_gt >= 0) & (x_gt < W) & (y_gt >= 0) & (y_gt < H)
 
         # --- draw (FIXED LAYOUT) ---

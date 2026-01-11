@@ -114,7 +114,8 @@ def train(args):
     train_metrics_file_path = os.path.join("metrics/train/", f"{date_str}.csv")
     val_metrics_file_path = os.path.join("metrics/val/", f"{date_str}.csv")
     test_metrics_file_path = os.path.join("metrics/test/", f"{date_str}.csv")
-    checkpoint_path = os.path.join("checkpoints/", f"{date_str}_best_checkpoint_zod.pth")
+    best_checkpoint_path = os.path.join("checkpoints/", f"{date_str}_best_checkpoint_zod.pth")
+    lastest_checkpoint_path = os.path.join("checkpoints/", f"{date_str}_lastest_checkpoint_zod.pth")
 
     model = nn.DataParallel(HCNet(args), device_ids=args.gpuid)
     print("Parameter Count: %d" % count_parameters(model))
@@ -278,7 +279,7 @@ def train(args):
             }
             best_model_dict = model.state_dict()
             # PATH = 'checkpoints/best_checkpoint_{}.pth'.format(args.name)
-            PATH = checkpoint_path
+            PATH = best_checkpoint_path
             torch.save(checkpoint, PATH)
             print('\033[1;94m'+"Save the best of {}, at {}\033[0m".format(val_mdis, PATH))
         else:
@@ -288,6 +289,16 @@ def train(args):
                 .format(epoch+1, num_epochs, val_mdis.item(), best_dis, checkpoint['steps']) + '\n')                       
         epoch+=1 
         
+        # save lastest anyways
+        checkpoint = {
+            'best_dis': val_mdis,
+            'steps': total_steps,
+            'model': model.state_dict(),
+            'optimizer': optimizer.state_dict(),
+            'lr_schedule':scheduler.state_dict()
+        }
+        PATH = lastest_checkpoint_path
+        torch.save(checkpoint, PATH)        
         
     logger.close()
     print("The minist distance is {}m!".format(best_dis))
