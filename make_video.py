@@ -35,104 +35,265 @@ def to_device(batch, device):
             out[k] = v
     return out
 
+# def render_pred_gt_frame(
+#     sat_img_chw,          
+#     points_xyz,           
+#     trans_pred_xy,        
+#     yaw_pred_deg,         
+#     trans_gt_xy,          
+#     rot_gt_2x2,           
+#     resolution_m_per_px,  
+#     title=None,
+#     max_points=30000,
+#     figsize=(10, 5),
+#     dpi=140,
+# ):
+#     """Render side-by-side predicted vs GT LiDAR-satellite overlay."""
+#     # --- to numpy ---
+#     img = sat_img_chw.float().permute(1, 2, 0).numpy()  # (H,W,3)
+#     pts = points_xyz.float().numpy()[:, :2]             # (N,2)
+#     H, W, _ = img.shape
+#     c = (H-1)/2.0
+#     res = float(resolution_m_per_px)
+
+#     if max_points is not None and pts.shape[0] > max_points:
+#         idx = np.random.choice(pts.shape[0], size=max_points, replace=False)
+#         pts = pts[idx]
+
+#     # --- predicted pose transform ---
+#     theta = np.deg2rad(float(yaw_pred_deg))
+#     rot_pred = np.array([[np.cos(theta), -np.sin(theta)],
+#                          [np.sin(theta),  np.cos(theta)]], dtype=np.float32)
+#     trans_pred = np.asarray(trans_pred_xy, dtype=np.float32).reshape(2,)
+
+#     pts_pred = pts @ np.linalg.inv(rot_pred.T) + trans_pred
+#     x_pred = c + pts_pred[:, 0] / res
+#     y_pred = c - pts_pred[:, 1] / res
+#     m_pred = (x_pred >= 0) & (x_pred < W) & (y_pred >= 0) & (y_pred < H)
+
+#     # --- GT pose transform ---
+#     rot_gt = np.asarray(rot_gt_2x2, dtype=np.float32).reshape(2, 2)
+#     trans_gt = np.asarray(trans_gt_xy, dtype=np.float32).reshape(2,)
+
+#     pts_gt = pts @ np.linalg.inv(rot_gt.T) + trans_gt
+#     x_gt = c + pts_gt[:, 0] / res
+#     y_gt = c - pts_gt[:, 1] / res
+#     m_gt = (x_gt >= 0) & (x_gt < W) & (y_gt >= 0) & (y_gt < H)
+
+#         # --- draw (FIXED LAYOUT) ---
+#     fig = plt.figure(figsize=figsize, dpi=dpi)
+
+#     # A dedicated title row prevents per-frame resizing/jitter
+#     gs = fig.add_gridspec(
+#         nrows=2, ncols=2,
+#         height_ratios=[1, 18],     # <-- adjust title band height here
+#         hspace=0.0, wspace=0.01
+#     )
+
+#     ax_title = fig.add_subplot(gs[0, :])
+#     ax0 = fig.add_subplot(gs[1, 0])
+#     ax1 = fig.add_subplot(gs[1, 1])
+
+#     # Title axis (fixed position, fixed height)
+#     ax_title.axis("off")
+#     if title:
+#         ax_title.text(0.5, 0.5, title, ha="center", va="center",
+#                       fontsize=12, color="black", weight="bold")
+
+#     # Predicted (Left)
+#     ax0.imshow(img, origin="upper")
+#     ax0.scatter(x_pred[m_pred], y_pred[m_pred], s=0.2, c="r", alpha=0.2, clip_on=True)
+#     ax0.set_aspect("equal")
+#     ax0.axis("off")
+#     ax0.text(0.02, 0.95, "PREDICTED", transform=ax0.transAxes,
+#              fontsize=10, color="white", weight="bold", ha="left", va="top",
+#              bbox=dict(facecolor="black", alpha=0.5, edgecolor="none", pad=2))
+
+#     # GT (Right)
+#     ax1.imshow(img, origin="upper")
+#     ax1.scatter(x_gt[m_gt], y_gt[m_gt], s=0.2, c="r", alpha=0.2, clip_on=True)
+#     ax1.set_aspect("equal")
+#     ax1.axis("off")
+#     ax1.text(0.02, 0.95, "GROUND TRUTH", transform=ax1.transAxes,
+#              fontsize=10, color="white", weight="bold", ha="left", va="top",
+#              bbox=dict(facecolor="black", alpha=0.5, edgecolor="none", pad=2))
+    
+#     fig.tight_layout()
+
+#     # EXTRA SAFETY: freeze limits so nothing can autoscale and shrink the image
+#     for a in (ax0, ax1):
+#         a.set_xlim(-0.5, W - 0.5)
+#         a.set_ylim(H - 0.5, -0.5)   # because origin="upper"
+#         a.set_autoscale_on(False)
+
+#     # --- canvas -> RGB uint8 ---
+#     fig.canvas.draw()
+#     frame = np.asarray(fig.canvas.buffer_rgba()) 
+#     frame = frame[:, :, :3]
+    
+#     plt.close(fig)
+#     return frame
+
 def render_pred_gt_frame(
-    sat_img_chw,          
-    points_xyz,           
-    trans_pred_xy,        
-    yaw_pred_deg,         
-    trans_gt_xy,          
-    rot_gt_2x2,           
-    resolution_m_per_px,  
+    sat_img_chw,
+    points_xyz,
+    trans_pred_xy,
+    yaw_pred_deg,
+    trans_gt_xy,
+    rot_gt_2x2,
+    resolution_m_per_px,
     title=None,
     max_points=30000,
     figsize=(10, 5),
     dpi=140,
 ):
-    """Render side-by-side predicted vs GT LiDAR-satellite overlay."""
+    """Render side-by-side predicted vs GT LiDAR-satellite overlay,
+    cropped to half-size around GT center to remove jitter.
+    """
+    import numpy as np
+    import matplotlib.pyplot as plt
+
     # --- to numpy ---
-    img = sat_img_chw.float().permute(1, 2, 0).numpy()  # (H,W,3)
-    pts = points_xyz.float().numpy()[:, :2]             # (N,2)
+    img = sat_img_chw.float().permute(1, 2, 0).numpy()  # (H, W, 3)
+    pts = points_xyz.float().numpy()[:, :2]            # (N, 2)
     H, W, _ = img.shape
-    c = (H-1)/2.0
+    c = (H - 1) / 2.0
     res = float(resolution_m_per_px)
 
     if max_points is not None and pts.shape[0] > max_points:
         idx = np.random.choice(pts.shape[0], size=max_points, replace=False)
         pts = pts[idx]
 
-    # --- predicted pose transform ---
+    # -----------------------------------------------------------
+    # Predicted pose transform
+    # -----------------------------------------------------------
     theta = np.deg2rad(float(yaw_pred_deg))
-    rot_pred = np.array([[np.cos(theta), -np.sin(theta)],
-                         [np.sin(theta),  np.cos(theta)]], dtype=np.float32)
+    rot_pred = np.array(
+        [[np.cos(theta), -np.sin(theta)],
+         [np.sin(theta),  np.cos(theta)]],
+        dtype=np.float32,
+    )
     trans_pred = np.asarray(trans_pred_xy, dtype=np.float32).reshape(2,)
 
     pts_pred = pts @ np.linalg.inv(rot_pred.T) + trans_pred
     x_pred = c + pts_pred[:, 0] / res
     y_pred = c - pts_pred[:, 1] / res
-    m_pred = (x_pred >= 0) & (x_pred < W) & (y_pred >= 0) & (y_pred < H)
 
-    # --- GT pose transform ---
+    # -----------------------------------------------------------
+    # GT pose transform
+    # -----------------------------------------------------------
     rot_gt = np.asarray(rot_gt_2x2, dtype=np.float32).reshape(2, 2)
     trans_gt = np.asarray(trans_gt_xy, dtype=np.float32).reshape(2,)
 
     pts_gt = pts @ np.linalg.inv(rot_gt.T) + trans_gt
     x_gt = c + pts_gt[:, 0] / res
     y_gt = c - pts_gt[:, 1] / res
-    m_gt = (x_gt >= 0) & (x_gt < W) & (y_gt >= 0) & (y_gt < H)
 
-        # --- draw (FIXED LAYOUT) ---
+    # -----------------------------------------------------------
+    # Crop image around GT center (half resolution)
+    # -----------------------------------------------------------
+    cx_gt = c + trans_gt[0] / res
+    cy_gt = c - trans_gt[1] / res
+
+    crop_h = H // 2
+    crop_w = W // 2
+    half_h = crop_h // 2
+    half_w = crop_w // 2
+
+    x0 = int(np.clip(cx_gt - half_w, 0, W - crop_w))
+    y0 = int(np.clip(cy_gt - half_h, 0, H - crop_h))
+    x1 = x0 + crop_w
+    y1 = y0 + crop_h
+
+    img_crop = img[y0:y1, x0:x1]
+
+    # Shift projected points into cropped frame
+    x_pred -= x0
+    y_pred -= y0
+    x_gt   -= x0
+    y_gt   -= y0
+
+    m_pred = (
+        (x_pred >= 0) & (x_pred < crop_w) &
+        (y_pred >= 0) & (y_pred < crop_h)
+    )
+    m_gt = (
+        (x_gt >= 0) & (x_gt < crop_w) &
+        (y_gt >= 0) & (y_gt < crop_h)
+    )
+
+    # -----------------------------------------------------------
+    # Draw (fixed layout, no jitter)
+    # -----------------------------------------------------------
     fig = plt.figure(figsize=figsize, dpi=dpi)
 
-    # A dedicated title row prevents per-frame resizing/jitter
     gs = fig.add_gridspec(
-        nrows=2, ncols=2,
-        height_ratios=[1, 18],     # <-- adjust title band height here
-        hspace=0.0, wspace=0.01
+        nrows=2,
+        ncols=2,
+        height_ratios=[1, 18],
+        hspace=0.0,
+        wspace=0.01,
     )
 
     ax_title = fig.add_subplot(gs[0, :])
     ax0 = fig.add_subplot(gs[1, 0])
     ax1 = fig.add_subplot(gs[1, 1])
 
-    # Title axis (fixed position, fixed height)
     ax_title.axis("off")
     if title:
-        ax_title.text(0.5, 0.5, title, ha="center", va="center",
-                      fontsize=12, color="black", weight="bold")
+        ax_title.text(
+            0.5, 0.5, title,
+            ha="center", va="center",
+            fontsize=12, color="black", weight="bold",
+        )
 
-    # Predicted (Left)
-    ax0.imshow(img, origin="upper")
-    ax0.scatter(x_pred[m_pred], y_pred[m_pred], s=0.2, c="r", alpha=0.2, clip_on=True)
-    ax0.set_aspect("equal")
+    # Predicted
+    ax0.imshow(img_crop, origin="upper")
+    ax0.scatter(
+        x_pred[m_pred], y_pred[m_pred],
+        s=0.2, c="r", alpha=0.2, clip_on=True
+    )
     ax0.axis("off")
-    ax0.text(0.02, 0.95, "PREDICTED", transform=ax0.transAxes,
-             fontsize=10, color="white", weight="bold", ha="left", va="top",
-             bbox=dict(facecolor="black", alpha=0.5, edgecolor="none", pad=2))
+    ax0.text(
+        0.02, 0.95, "PREDICTED",
+        transform=ax0.transAxes,
+        fontsize=10, color="white", weight="bold",
+        ha="left", va="top",
+        bbox=dict(facecolor="black", alpha=0.5, edgecolor="none", pad=2),
+    )
 
-    # GT (Right)
-    ax1.imshow(img, origin="upper")
-    ax1.scatter(x_gt[m_gt], y_gt[m_gt], s=0.2, c="r", alpha=0.2, clip_on=True)
-    ax1.set_aspect("equal")
+    # Ground Truth
+    ax1.imshow(img_crop, origin="upper")
+    ax1.scatter(
+        x_gt[m_gt], y_gt[m_gt],
+        s=0.2, c="r", alpha=0.2, clip_on=True
+    )
     ax1.axis("off")
-    ax1.text(0.02, 0.95, "GROUND TRUTH", transform=ax1.transAxes,
-             fontsize=10, color="white", weight="bold", ha="left", va="top",
-             bbox=dict(facecolor="black", alpha=0.5, edgecolor="none", pad=2))
-    
+    ax1.text(
+        0.02, 0.95, "GROUND TRUTH",
+        transform=ax1.transAxes,
+        fontsize=10, color="white", weight="bold",
+        ha="left", va="top",
+        bbox=dict(facecolor="black", alpha=0.5, edgecolor="none", pad=2),
+    )
+
     fig.tight_layout()
 
-    # EXTRA SAFETY: freeze limits so nothing can autoscale and shrink the image
+    # Freeze limits to avoid any autoscaling jitter
     for a in (ax0, ax1):
-        a.set_xlim(-0.5, W - 0.5)
-        a.set_ylim(H - 0.5, -0.5)   # because origin="upper"
+        a.set_xlim(-0.5, crop_w - 0.5)
+        a.set_ylim(crop_h - 0.5, -0.5)
         a.set_autoscale_on(False)
 
-    # --- canvas -> RGB uint8 ---
+    # -----------------------------------------------------------
+    # Canvas → RGB uint8
+    # -----------------------------------------------------------
     fig.canvas.draw()
-    frame = np.asarray(fig.canvas.buffer_rgba()) 
-    frame = frame[:, :, :3]
-    
+    frame = np.asarray(fig.canvas.buffer_rgba())[:, :, :3]
     plt.close(fig)
+
     return frame
+
 
 def create_drive_video(model, val_loader, args):
     """
@@ -316,7 +477,7 @@ def main():
     
     # --- Video Generation Arguments ---
     p.add_argument('--iters_lev0', type=int, default=6, help="Refinement iterations for inference")
-    p.add_argument('--video_path', type=str, default='metrics/val/drive_overlay.mp4', help="Output file (.mp4 or .gif)")
+    p.add_argument('--video_path', type=str, default='metrics/val/drive_overlay2.mp4', help="Output file (.mp4 or .gif)")
     p.add_argument('--video_fps', type=int, default=10, help="Frame rate for the video")
     p.add_argument('--video_max_points', type=int, default=30000, help="Max LiDAR points per frame")
 
@@ -344,7 +505,6 @@ def main():
 
     print(f"Loaded Config: {args.config}")
     print(f"Video Target: {args.video_path} @ {args.video_fps} FPS")
-
     # --- Execution ---
     device = torch.device('cuda:' + str(args.gpuid[0]) if torch.cuda.is_available() else 'cpu')
     

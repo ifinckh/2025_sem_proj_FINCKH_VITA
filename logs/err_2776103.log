@@ -1,5 +1,0 @@
-usage: caract_zod.py [-h] [--config CONFIG] [--model MODEL]
-                     [--gpuid GPUID [GPUID ...]] [--iters_lev0 ITERS_LEV0]
-                     [--batch_size BATCH_SIZE] [--num_workers NUM_WORKERS]
-                     [--validation VALIDATION] [--log_every LOG_EVERY]
-caract_zod.py: error: unrecognized arguments: --restore_ckpt checkpoints/2025_12_27_best_checkpoint_zod_0.pth

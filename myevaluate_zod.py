@@ -201,7 +201,7 @@ def evaluate_hcnet_zod(model, val_loader, args):
     print("-" * 20)
     print(f"Success Rates (Recalls):")
     print(f"  @1m:    {recall_1m:.2f}%")
-    print(f"  @3m:    {recall_2m:.2f}%")
+    print(f"  @2m:    {recall_2m:.2f}%")
     print(f"  @5m:    {recall_5m:.2f}%")
     print(f"  @10m:   {recall_10m:.2f}%")
     print("-" * 20)

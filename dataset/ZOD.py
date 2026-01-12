@@ -94,24 +94,13 @@ class ZOD(torch.utils.data.Dataset):
         self.BEV_grid_resolution = config['BEV_grid_resolution'] # 0.1,
         # 
         self.use_augmentation = config['use_augmentation']
-        # self.aug_noise = config['augmentation_noise']
-        # self.aug_rotation = config['augmentation_rotation']
-        # image aug
-        # self.aug = iaa.Sequential([
-        #     iaa.Sometimes(0.5, iaa.Add((-30, 30))),
-        #     iaa.Sometimes(0.5, iaa.LinearContrast((0.7, 1.3))),  # 
-        #     iaa.Sometimes(0.5, iaa.AdditiveGaussianNoise(scale=(0, 8))),  #
-        #     iaa.Sometimes(0.5, iaa.ImpulseNoise(p=(0, 0.003))),  # 
-        #     iaa.Sometimes(0.5, iaa.MotionBlur(3)),  # 
-        #     iaa.Sometimes(0.5, iaa.GaussianBlur(sigma=(0, 1.5))),  # 
-        # ])
         
         self.metadata_list = []
         self.drive_infos = {}
         
         ####### For debugging, use only subset of training drives ########
         # task_data_subset = ["000009","000007"] 
-        task_data_subset = task_data_subset[:1]
+        # task_data_subset = task_data_subset[2:3]
         
         bad_samples = pd.read_csv("dataset/dataset_utils/bad_ids.csv")
 
@@ -125,12 +114,13 @@ class ZOD(torch.utils.data.Dataset):
         # pbar = tqdm(total=total_frames, desc="Processing ZOD Drives", unit="Frame", colour="blue")
         
         # manually add bad samples found during evaluation
-        # good_batches_trans = [[17,1093],[5,1579],[28,524]]
-        # good_batches_rot = [[17,611],[17,723],[17,2244],[7,996]]
-        # bad_batches_trans = [[2,266],[2,354],[2,795],[7,1626]]
-        # bad_batches_rot = [[5,424],[5,1399],[5,1401],[7,338]]
+        # good_batches_trans = [[1,985],[28,735],[2,350], [2,575]]
+        # good_batches_rot = [[7,700],[7,955],[1,580],[28,530]]
+        # bad_batches_trans = [[7,2210],[1,285],[2,1235]]
+        # bad_batches_rot = [[7,1560],[2,720],[2,730],[2,965]]
         # interest_samples = pd.DataFrame(data=good_batches_trans+good_batches_rot+bad_batches_trans+bad_batches_rot,
         #                 columns=['scene_name', 'name'])
+        # interest_samples = pd.DataFrame(data=good_batches_trans, columns=['scene_name', 'name'])
         
         # for drive_key in list(task_data_subset):
         for drive_key in task_data_subset:
@@ -150,12 +140,7 @@ class ZOD(torch.utils.data.Dataset):
 
             # Read HDF5 Data Once
             with h5py.File(filename, "r") as f:
-                # def recursively_print(name, obj):
-                #     print(name)
-                # f.visititems(recursively_print)
-                # print('GNSSAntenna/accuracyHeadingAntennas', f['GNSSAntenna/accuracyHeadingAntennas'][()])
-                # print('poseSource', f['poseSource'][()])
-
+                
                 orientationMode = f['orientationMode'][()]
                 earth_frame_bytes = f['earthFrame'][()]
                 earth_frame = b''.join(earth_frame_bytes).decode('utf-8') 
@@ -195,6 +180,7 @@ class ZOD(torch.utils.data.Dataset):
                 'calibrations': calibrations,
             }
             
+            # Load Aerial Image Metadata from other folder
             aerial_metadata_path = os.path.join(self.aerial_img_dataset_root, "drives" ,drive.metadata.country_code, "labels.json" )
 
             with open(aerial_metadata_path, 'r') as f:
@@ -202,30 +188,35 @@ class ZOD(torch.utils.data.Dataset):
                 
             aerial_img_data_df = pd.DataFrame(aer_img_data_temp)
             
+            # filter only images in the aerial folder
             if drive_key not in aerial_img_data_df.drive_idx.unique():
                 continue
             
+            # iterate through frames in each drive
             for frame_idx in range(num_frames):
                 
                 # skip bad samples
                 if len(bad_samples.loc[(bad_samples.scene_name.astype(int) == drive_idx) & (bad_samples.name.astype(int) == frame_idx)]):
                     continue
-                # take only the interest samples
+                # uncomment to take only the interest samples, when debugging for good/bad samples
                 # if len(interest_samples.loc[(interest_samples.scene_name.astype(int) == drive_idx) & (interest_samples.name.astype(int) == frame_idx)]):
                 #     self.metadata_list.append([drive_idx,frame_idx, aerial_img_data_df.loc[(aerial_img_data_df.drive_idx.astype(int) == drive_idx) & (aerial_img_data_df.frame_idx == frame_idx), ['aerial_latlon', 'heading', 'aerial_image', 'resolution'] ].to_dict(orient='records')[0] ])
-
                 
-                # if frame_idx > 20:
+                # uncomment for quick test of only the first 10 frames
+                # if frame_idx > 10:
                 #     break
                 
-                # use only subsample of frames for faster training
-                if frame_idx % 100 == 0:
+                # uncomment to use only subsample of frames for faster dataloading
+                if frame_idx % 3 == 0:
                     self.metadata_list.append([drive_idx,frame_idx, aerial_img_data_df.loc[(aerial_img_data_df.drive_idx.astype(int) == drive_idx) & (aerial_img_data_df.frame_idx == frame_idx), ['aerial_latlon', 'heading', 'aerial_image', 'resolution'] ].to_dict(orient='records')[0] ])
                 else:
                     continue
                 
+                # normal case
                 # self.metadata_list.append([drive_idx,frame_idx, aerial_img_data_df.loc[(aerial_img_data_df.drive_idx.astype(int) == drive_idx) & (aerial_img_data_df.frame_idx == frame_idx), ['aerial_latlon', 'heading', 'aerial_image', 'resolution'] ].to_dict(orient='records')[0] ])
-                # # pbar.update(1)
+                
+                # uncomment if you want a process bar updating (doesn't always render well)
+                # pbar.update(1)
                 
         # pbar.close()
             
@@ -245,10 +236,8 @@ class ZOD(torch.utils.data.Dataset):
                 writer.writerow([metadata["scene_name"], metadata["name"], 4])
             return None
 
-        # -------------------- Image (square) --------------------
+        # -------------------- Image --------------------
         H0, W0 = image_rgb.shape[:2]
-        # if H0 != W0:
-        #     raise ValueError(f"Expected square aerial image, got H={H0}, W={W0}")
 
         # focal in original pixel coords
         cx0, cy0 = float(focal[0]), float(focal[1])

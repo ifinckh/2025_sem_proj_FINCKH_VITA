@@ -3,7 +3,7 @@
 #SBATCH --chdir=/home/finckh/VITA/HC-Net
 #SBATCH --account=civil-459
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=10
+#SBATCH --cpus-per-task=20
 #SBATCH --gres=gpu:1
 #SBATCH --mem=50G
 #SBATCH --time=1:00:00
@@ -19,6 +19,6 @@ conda activate dg
 
 # Run training
 
-python -u make_video.py --iters_lev0 6 --batch_size 1 --restore_ckpt checkpoints/2025_12_27_best_checkpoint_zod_0.pth --config models/config/ZOD/train.json
+python -u make_video.py --iters_lev0 6 --batch_size 1 --restore_ckpt checkpoints/2026_01_11_17_52_20_lastest_checkpoint_zod.pth --config models/config/ZOD/train.json
 
 conda deactivate

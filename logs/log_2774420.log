@@ -7614,3 +7614,62 @@ Epoch: [25/25], Batch: 1380/2963, Loss: 62.517, Trans_L2_m: 0.807, Yaw_err_deg: 
 Epoch: [25/25], Batch: 1390/2963, Loss: 59.814, Trans_L2_m: 0.944, Yaw_err_deg: 0.580
 Epoch: [25/25], Batch: 1400/2963, Loss: 57.794, Trans_L2_m: 0.914, Yaw_err_deg: 0.408
 Epoch: [25/25], Batch: 1410/2963, Loss: 56.124, Trans_L2_m: 0.597, Yaw_err_deg: 0.547
+Epoch: [25/25], Batch: 1420/2963, Loss: 54.224, Trans_L2_m: 0.806, Yaw_err_deg: 0.484
+Epoch: [25/25], Batch: 1430/2963, Loss: 54.961, Trans_L2_m: 0.574, Yaw_err_deg: 0.582
+Epoch: [25/25], Batch: 1440/2963, Loss: 52.858, Trans_L2_m: 0.705, Yaw_err_deg: 0.591
+Epoch: [25/25], Batch: 1450/2963, Loss: 56.511, Trans_L2_m: 0.708, Yaw_err_deg: 0.633
+Epoch: [25/25], Batch: 1460/2963, Loss: 54.745, Trans_L2_m: 0.805, Yaw_err_deg: 0.945
+Epoch: [25/25], Batch: 1470/2963, Loss: 65.659, Trans_L2_m: 1.059, Yaw_err_deg: 0.616
+Epoch: [25/25], Batch: 1480/2963, Loss: 57.903, Trans_L2_m: 0.877, Yaw_err_deg: 0.635
+Epoch: [25/25], Batch: 1490/2963, Loss: 67.675, Trans_L2_m: 0.775, Yaw_err_deg: 0.933
+Epoch: [25/25], Batch: 1500/2963, Loss: 59.719, Trans_L2_m: 0.758, Yaw_err_deg: 0.753
+Epoch: [25/25], Batch: 1510/2963, Loss: 54.625, Trans_L2_m: 0.781, Yaw_err_deg: 0.504
+Epoch: [25/25], Batch: 1520/2963, Loss: 54.940, Trans_L2_m: 0.706, Yaw_err_deg: 0.512
+Epoch: [25/25], Batch: 1530/2963, Loss: 59.652, Trans_L2_m: 0.609, Yaw_err_deg: 0.538
+Epoch: [25/25], Batch: 1540/2963, Loss: 60.817, Trans_L2_m: 0.807, Yaw_err_deg: 0.753
+Epoch: [25/25], Batch: 1550/2963, Loss: 59.817, Trans_L2_m: 0.765, Yaw_err_deg: 0.519
+Epoch: [25/25], Batch: 1560/2963, Loss: 55.826, Trans_L2_m: 0.780, Yaw_err_deg: 0.439
+Epoch: [25/25], Batch: 1570/2963, Loss: 77.207, Trans_L2_m: 1.128, Yaw_err_deg: 0.644
+Epoch: [25/25], Batch: 1580/2963, Loss: 60.966, Trans_L2_m: 0.885, Yaw_err_deg: 0.810
+Epoch: [25/25], Batch: 1590/2963, Loss: 56.774, Trans_L2_m: 0.701, Yaw_err_deg: 0.818
+Epoch: [25/25], Batch: 1600/2963, Loss: 57.183, Trans_L2_m: 0.729, Yaw_err_deg: 0.696
+Epoch: [25/25], Batch: 1610/2963, Loss: 64.921, Trans_L2_m: 0.929, Yaw_err_deg: 0.450
+Epoch: [25/25], Batch: 1620/2963, Loss: 55.068, Trans_L2_m: 0.770, Yaw_err_deg: 0.551
+Epoch: [25/25], Batch: 1630/2963, Loss: 55.698, Trans_L2_m: 0.783, Yaw_err_deg: 0.545
+Epoch: [25/25], Batch: 1640/2963, Loss: 61.888, Trans_L2_m: 0.711, Yaw_err_deg: 0.589
+Epoch: [25/25], Batch: 1650/2963, Loss: 56.217, Trans_L2_m: 0.775, Yaw_err_deg: 0.534
+Epoch: [25/25], Batch: 1660/2963, Loss: 51.131, Trans_L2_m: 0.588, Yaw_err_deg: 0.426
+Epoch: [25/25], Batch: 1670/2963, Loss: 62.334, Trans_L2_m: 0.897, Yaw_err_deg: 0.411
+Epoch: [25/25], Batch: 1680/2963, Loss: 49.954, Trans_L2_m: 0.718, Yaw_err_deg: 0.631
+Epoch: [25/25], Batch: 1690/2963, Loss: 53.003, Trans_L2_m: 0.912, Yaw_err_deg: 0.609
+Epoch: [25/25], Batch: 1700/2963, Loss: 54.498, Trans_L2_m: 0.812, Yaw_err_deg: 0.413
+Epoch: [25/25], Batch: 1710/2963, Loss: 60.079, Trans_L2_m: 0.717, Yaw_err_deg: 0.780
+Epoch: [25/25], Batch: 1720/2963, Loss: 85.109, Trans_L2_m: 1.545, Yaw_err_deg: 0.662
+Epoch: [25/25], Batch: 1730/2963, Loss: 51.815, Trans_L2_m: 0.755, Yaw_err_deg: 0.476
+Epoch: [25/25], Batch: 1740/2963, Loss: 78.875, Trans_L2_m: 1.272, Yaw_err_deg: 0.751
+Epoch: [25/25], Batch: 1750/2963, Loss: 64.768, Trans_L2_m: 0.742, Yaw_err_deg: 0.693
+Epoch: [25/25], Batch: 1760/2963, Loss: 58.553, Trans_L2_m: 0.916, Yaw_err_deg: 0.431
+Epoch: [25/25], Batch: 1770/2963, Loss: 63.264, Trans_L2_m: 0.886, Yaw_err_deg: 0.695
+Epoch: [25/25], Batch: 1780/2963, Loss: 48.697, Trans_L2_m: 0.496, Yaw_err_deg: 0.415
+Epoch: [25/25], Batch: 1790/2963, Loss: 55.942, Trans_L2_m: 0.719, Yaw_err_deg: 0.694
+Epoch: [25/25], Batch: 1800/2963, Loss: 51.157, Trans_L2_m: 0.578, Yaw_err_deg: 0.547
+Epoch: [25/25], Batch: 1810/2963, Loss: 59.565, Trans_L2_m: 1.001, Yaw_err_deg: 0.619
+Epoch: [25/25], Batch: 1820/2963, Loss: 55.852, Trans_L2_m: 0.775, Yaw_err_deg: 0.718
+Epoch: [25/25], Batch: 1830/2963, Loss: 56.738, Trans_L2_m: 0.872, Yaw_err_deg: 0.777
+Epoch: [25/25], Batch: 1840/2963, Loss: 64.956, Trans_L2_m: 0.838, Yaw_err_deg: 0.709
+Epoch: [25/25], Batch: 1850/2963, Loss: 70.304, Trans_L2_m: 1.072, Yaw_err_deg: 0.765
+Epoch: [25/25], Batch: 1860/2963, Loss: 58.265, Trans_L2_m: 0.835, Yaw_err_deg: 0.715
+Epoch: [25/25], Batch: 1870/2963, Loss: 57.179, Trans_L2_m: 0.812, Yaw_err_deg: 0.570
+Epoch: [25/25], Batch: 1880/2963, Loss: 51.344, Trans_L2_m: 0.588, Yaw_err_deg: 0.470
+Epoch: [25/25], Batch: 1890/2963, Loss: 68.863, Trans_L2_m: 0.956, Yaw_err_deg: 0.617
+Epoch: [25/25], Batch: 1900/2963, Loss: 59.012, Trans_L2_m: 0.711, Yaw_err_deg: 0.612
+Epoch: [25/25], Batch: 1910/2963, Loss: 58.111, Trans_L2_m: 0.877, Yaw_err_deg: 0.859
+Epoch: [25/25], Batch: 1920/2963, Loss: 58.744, Trans_L2_m: 0.907, Yaw_err_deg: 0.677
+Validation loss (homography): 4868.7547
+Avg batch time: 1134.50 ms, total: 368.021 s
+[1;91mVal has no improvement vs 4605.474609375![0m
+The minist distance is 4605.474609375m!
+Loading val split : 6 drives
+Validation with 10393 samples.
+Logging metrics to: metrics/val/2026_01_12_00_30_49_hcnet_zod_eval.csv
+Starting evaluation on 10393 batches...

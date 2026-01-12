@@ -1,0 +1,8 @@
+Loaded Config: models/config/ZOD/train.json
+Video Target: metrics/val/drive_overlay.mp4 @ 10 FPS
+Loaded pretrained weights for efficientnet-b0
+Loaded checkpoint: checkpoints/2026_01_11_17_52_20_lastest_checkpoint_zod.pth
+Loading val split : 6 drives
+Validation with 0 samples.
+Processing 0 batches...
+✓ Video saved to: metrics/val/drive_overlay.mp4
