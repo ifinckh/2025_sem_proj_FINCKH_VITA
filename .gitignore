@@ -3,9 +3,9 @@
 watch/
 checkpoints/*
 logs/
+logs/*
 metrics/
-*.log
-*.csv
-*.pth
-
+metrics/*
+.ipynb_checkpoints/*
+.vscode/*
 **/a_local_test
