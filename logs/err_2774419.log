@@ -1,38 +1,0 @@
-Loading infos: 0it [00:00, ?it/s]Loading infos: 1it [00:01,  1.07s/it]Loading infos: 29it [00:01, 27.22it/s]
-Loading infos: 0it [00:00, ?it/s]Loading infos: 1it [00:00,  1.22it/s]Loading infos: 29it [00:00, 35.41it/s]
-Loading infos: 0it [00:00, ?it/s]Loading infos: 1it [00:00,  1.26it/s]Loading infos: 29it [00:00, 36.54it/s]
-Traceback (most recent call last):
-  File "/home/finckh/VITA/HC-Net/train.py", line 345, in <module>
-  File "/home/finckh/VITA/HC-Net/train.py", line 303, in train
-    logger.close()
-  File "/home/finckh/miniconda3/envs/dg/lib/python3.10/site-packages/torch/utils/_contextlib.py", line 116, in decorate_context
-    return func(*args, **kwargs)
-  File "/home/finckh/VITA/HC-Net/myevaluate_zod.py", line 115, in evaluate_hcnet_zod
-    four_pred, _ = model(bev, sat_img, sat_gps=None, iters_lev0=args.iters_lev0)
-  File "/home/finckh/miniconda3/envs/dg/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
-    return self._call_impl(*args, **kwargs)
-  File "/home/finckh/miniconda3/envs/dg/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1747, in _call_impl
-    return forward_call(*args, **kwargs)
-  File "/home/finckh/VITA/HC-Net/models/network.py", line 134, in forward
-    lidar_feat = self.lidar_backbone(bev_lidar)  # (B, 96, H_bev', W_bev')
-  File "/home/finckh/miniconda3/envs/dg/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
-    return self._call_impl(*args, **kwargs)
-  File "/home/finckh/miniconda3/envs/dg/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1747, in _call_impl
-    return forward_call(*args, **kwargs)
-  File "/home/finckh/VITA/HC-Net/models/LIDAR_BEV/LIDAR_BEV_backbone.py", line 198, in forward
-    feat = self.backbone(bev)  # (B, 96, H', W')
-  File "/home/finckh/miniconda3/envs/dg/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
-    return self._call_impl(*args, **kwargs)
-  File "/home/finckh/miniconda3/envs/dg/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1747, in _call_impl
-    return forward_call(*args, **kwargs)
-  File "/home/finckh/VITA/HC-Net/models/LIDAR_BEV/LIDAR_BEV_backbone.py", line 126, in forward
-    x = self.bn1(x)
-  File "/home/finckh/miniconda3/envs/dg/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
-    return self._call_impl(*args, **kwargs)
-  File "/home/finckh/miniconda3/envs/dg/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1747, in _call_impl
-    return forward_call(*args, **kwargs)
-  File "/home/finckh/miniconda3/envs/dg/lib/python3.10/site-packages/torch/nn/modules/batchnorm.py", line 160, in forward
-    self._check_input_dim(input)
-  File "/home/finckh/miniconda3/envs/dg/lib/python3.10/site-packages/torch/nn/modules/batchnorm.py", line 452, in _check_input_dim
-    raise ValueError(f"expected 4D input (got {input.dim()}D input)")
-ValueError: expected 4D input (got 3D input)

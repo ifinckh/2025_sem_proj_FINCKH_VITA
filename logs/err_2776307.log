@@ -1,2 +1,0 @@
-Loading infos: 0it [00:00, ?it/s]Loading infos: 1it [00:01,  1.04s/it]Loading infos: 29it [00:01, 27.76it/s]
-IMAGEIO FFMPEG_WRITER WARNING: input image is not divisible by macro_block_size=16, resizing from (1400, 700) to (1408, 704) to ensure video compatibility with most codecs and players. To prevent resizing, make your input image divisible by the macro_block_size or set the macro_block_size to 1 (risking incompatibility).
