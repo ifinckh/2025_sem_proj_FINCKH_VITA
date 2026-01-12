@@ -18,10 +18,6 @@ source ~/.bashrc
 conda activate dg
 
 # Run training
-
 python -u myevaluate_zod.py --iters_lev0 6 --batch_size 16 --restore_ckpt checkpoints/2026_01_11_17_52_20_lastest_checkpoint_zod.pth --config models/config/ZOD/train.json
-# python -u myevaluate_zod.py --iters_lev0 6 --batch_size 32 --restore_ckpt checkpoints/2026_01_08_23_24_34_best_checkpoint_zod.pth --config models/config/ZOD/train.json
-
-# python -u caract_zod.py --iters_lev0 6 --batch_size 1 --restore_ckpt checkpoints/2025_12_27_best_checkpoint_zod_0.pth --config models/config/ZOD/train.json
 
 conda deactivate

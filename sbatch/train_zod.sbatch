@@ -18,7 +18,7 @@ source ~/.bashrc
 conda activate dg
 
 # Run training
-# python -u train.py --config /home/finckh/VITA/HC-Net/models/config/ZOD/train.json  --name zod_train # --batch_size 16
-python -u train.py --config /home/finckh/VITA/HC-Net/models/config/ZOD/train.json --name zod_train --restore_ckpt checkpoints/2026_01_09_14_36_50_best_checkpoint_zod.pth
+python -u train.py --config /home/finckh/VITA/HC-Net/models/config/ZOD/train.json  --name zod_train # --batch_size 16
+# python -u train.py --config /home/finckh/VITA/HC-Net/models/config/ZOD/train.json --name zod_train --restore_ckpt checkpoints/2026_01_09_14_36_50_best_checkpoint_zod.pth
 
 conda deactivate
