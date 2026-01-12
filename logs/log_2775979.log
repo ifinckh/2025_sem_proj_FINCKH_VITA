@@ -2997,3 +2997,8 @@ Epoch: [10/25], Batch: 0/2963, Loss: 198.000, Trans_L2_m: 2.408, Yaw_err_deg: 2.
 Epoch: [10/25], Batch: 10/2963, Loss: 180.723, Trans_L2_m: 2.176, Yaw_err_deg: 1.829
 Epoch: [10/25], Batch: 20/2963, Loss: 224.132, Trans_L2_m: 3.120, Yaw_err_deg: 1.990
 Epoch: [10/25], Batch: 30/2963, Loss: 160.135, Trans_L2_m: 2.185, Yaw_err_deg: 1.583
+Epoch: [10/25], Batch: 40/2963, Loss: 269.219, Trans_L2_m: 3.822, Yaw_err_deg: 1.997
+Epoch: [10/25], Batch: 50/2963, Loss: 124.889, Trans_L2_m: 1.221, Yaw_err_deg: 1.503
+Epoch: [10/25], Batch: 60/2963, Loss: 147.261, Trans_L2_m: 2.551, Yaw_err_deg: 1.904
+Epoch: [10/25], Batch: 70/2963, Loss: 120.198, Trans_L2_m: 1.906, Yaw_err_deg: 0.919
+Epoch: [10/25], Batch: 80/2963, Loss: 194.933, Trans_L2_m: 3.378, Yaw_err_deg: 1.570

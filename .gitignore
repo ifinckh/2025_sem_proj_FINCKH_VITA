@@ -2,5 +2,10 @@
 
 watch/
 checkpoints/*
+logs/
+metrics/
+*.log
+*.csv
+*.pth
 
 **/a_local_test
