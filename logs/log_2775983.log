@@ -3120,3 +3120,14 @@ Epoch: [23/25], Batch: 1210/2963, Loss: 56.592, Trans_L2_m: 0.916, Yaw_err_deg: 
 Epoch: [23/25], Batch: 1220/2963, Loss: 55.254, Trans_L2_m: 0.801, Yaw_err_deg: 0.483
 Epoch: [23/25], Batch: 1230/2963, Loss: 69.955, Trans_L2_m: 0.843, Yaw_err_deg: 0.755
 Epoch: [23/25], Batch: 1240/2963, Loss: 55.884, Trans_L2_m: 0.686, Yaw_err_deg: 0.538
+Epoch: [23/25], Batch: 1250/2963, Loss: 59.038, Trans_L2_m: 0.938, Yaw_err_deg: 0.970
+Epoch: [23/25], Batch: 1260/2963, Loss: 52.515, Trans_L2_m: 0.634, Yaw_err_deg: 0.699
+Epoch: [23/25], Batch: 1270/2963, Loss: 59.946, Trans_L2_m: 1.156, Yaw_err_deg: 0.571
+Epoch: [23/25], Batch: 1280/2963, Loss: 60.481, Trans_L2_m: 0.873, Yaw_err_deg: 0.629
+Epoch: [23/25], Batch: 1290/2963, Loss: 74.220, Trans_L2_m: 1.093, Yaw_err_deg: 0.618
+Epoch: [23/25], Batch: 1300/2963, Loss: 55.317, Trans_L2_m: 0.744, Yaw_err_deg: 0.595
+Epoch: [23/25], Batch: 1310/2963, Loss: 61.168, Trans_L2_m: 0.827, Yaw_err_deg: 0.688
+Epoch: [23/25], Batch: 1320/2963, Loss: 64.573, Trans_L2_m: 0.900, Yaw_err_deg: 0.885
+Epoch: [23/25], Batch: 1330/2963, Loss: 74.379, Trans_L2_m: 1.103, Yaw_err_deg: 0.697
+Epoch: [23/25], Batch: 1340/2963, Loss: 60.115, Trans_L2_m: 0.838, Yaw_err_deg: 0.935
+Epoch: [23/25], Batch: 1350/2963, Loss: 54.946, Trans_L2_m: 0.827, Yaw_err_deg: 0.746
